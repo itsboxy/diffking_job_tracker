@@ -9,6 +9,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke(IPC_CHANNELS.JOB_PDF, { html, jobId }),
   print: (html: string) =>
     ipcRenderer.invoke(IPC_CHANNELS.JOB_PRINT, { html }),
+
+  // Auto-update
+  onUpdateAvailable: (callback: (info: { version: string }) => void) =>
+    ipcRenderer.on(IPC_CHANNELS.UPDATE_AVAILABLE, (_event, info) => callback(info)),
+  onUpdateProgress: (callback: (info: { percent: number }) => void) =>
+    ipcRenderer.on(IPC_CHANNELS.UPDATE_DOWNLOAD_PROGRESS, (_event, info) => callback(info)),
+  onUpdateDownloaded: (callback: () => void) =>
+    ipcRenderer.on(IPC_CHANNELS.UPDATE_DOWNLOADED, () => callback()),
+  onUpdateError: (callback: (info: { message: string }) => void) =>
+    ipcRenderer.on(IPC_CHANNELS.UPDATE_ERROR, (_event, info) => callback(info)),
+  startUpdateDownload: () => ipcRenderer.send(IPC_CHANNELS.UPDATE_START_DOWNLOAD),
+  installUpdate: () => ipcRenderer.send(IPC_CHANNELS.UPDATE_INSTALL),
 });
 
 // Provide a minimal process shim for browser-only renderer bundles.
@@ -17,21 +29,3 @@ contextBridge.exposeInMainWorld('process', {
     NODE_ENV: 'production',
   },
 });
-
-declare global {
-  interface Window {
-    electronAPI: {
-      readJobs: () => string | null;
-      writeJobs: (data: string) => void;
-      generatePDF: (html: string, jobId: string) => Promise<{
-        success: boolean;
-        path?: string;
-        error?: string;
-      }>;
-      print: (html: string) => Promise<{
-        success: boolean;
-        error?: string;
-      }>;
-    };
-  }
-}

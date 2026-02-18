@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain, Menu, shell } from 'electron';
+import { autoUpdater } from 'electron-updater';
 import path from 'path';
 import fs from 'fs';
 import { WINDOW_CONFIG, IPC_CHANNELS } from './constants/config';
@@ -210,7 +211,58 @@ app.whenReady().then(() => {
         }
     });
 
+    // Auto-update IPC handlers
+    ipcMain.on(IPC_CHANNELS.UPDATE_START_DOWNLOAD, () => {
+        autoUpdater.downloadUpdate();
+    });
+
+    ipcMain.on(IPC_CHANNELS.UPDATE_INSTALL, () => {
+        autoUpdater.quitAndInstall();
+    });
+
     createWindow();
+
+    // Auto-update setup
+    autoUpdater.autoDownload = false;
+    autoUpdater.autoInstallOnAppQuit = true;
+
+    autoUpdater.on('update-available', (info) => {
+        if (mainWindow) {
+            mainWindow.webContents.send(IPC_CHANNELS.UPDATE_AVAILABLE, {
+                version: info.version,
+            });
+        }
+    });
+
+    autoUpdater.on('download-progress', (progress) => {
+        if (mainWindow) {
+            mainWindow.webContents.send(IPC_CHANNELS.UPDATE_DOWNLOAD_PROGRESS, {
+                percent: Math.round(progress.percent),
+            });
+        }
+    });
+
+    autoUpdater.on('update-downloaded', () => {
+        if (mainWindow) {
+            mainWindow.webContents.send(IPC_CHANNELS.UPDATE_DOWNLOADED);
+        }
+    });
+
+    autoUpdater.on('error', (error) => {
+        console.error('Auto-update error:', error);
+        if (mainWindow) {
+            mainWindow.webContents.send(IPC_CHANNELS.UPDATE_ERROR, {
+                message: error?.message || 'Update check failed',
+            });
+        }
+    });
+
+    // Check for updates after a short delay
+    setTimeout(() => {
+        autoUpdater.checkForUpdates().catch((err) => {
+            console.warn('Update check failed:', err);
+        });
+    }, 5000);
 });
 
 app.on('window-all-closed', () => {

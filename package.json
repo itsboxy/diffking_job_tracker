@@ -12,12 +12,13 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",
+    "electron-updater": "^6.7.3",
     "lucide-react": "^0.469.0",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
+    "react-redux": "^8.0.0",
     "react-router-dom": "^5.3.4",
     "redux": "^4.2.0",
-    "react-redux": "^8.0.0",
     "styled-components": "^6.1.8"
   },
   "devDependencies": {
@@ -25,11 +26,11 @@
     "@types/react-dom": "^18.2.17",
     "@types/react-router-dom": "^5.3.3",
     "@types/styled-components": "^5.1.34",
+    "cross-env": "^7.0.3",
     "electron": "^25.0.0",
     "electron-builder": "^24.13.3",
-    "cross-env": "^7.0.3",
-    "typescript": "^5.0.0",
     "ts-loader": "^9.0.0",
+    "typescript": "^5.0.0",
     "webpack": "^5.0.0",
     "webpack-cli": "^4.0.0"
   },
@@ -43,6 +44,13 @@
     "directories": {
       "output": "release-v4"
     },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "itsboxy",
+        "repo": "diffking_job_tracker"
+      }
+    ],
     "forceCodeSigning": false,
     "win": {
       "target": "nsis",

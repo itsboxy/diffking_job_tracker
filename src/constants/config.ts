@@ -4,6 +4,12 @@ export const IPC_CHANNELS = {
   JOBS_WRITE: 'diff-king-jobs-write',
   JOB_PDF: 'diff-king-job-pdf',
   JOB_PRINT: 'diff-king-job-print',
+  UPDATE_AVAILABLE: 'diff-king-update-available',
+  UPDATE_DOWNLOAD_PROGRESS: 'diff-king-update-download-progress',
+  UPDATE_DOWNLOADED: 'diff-king-update-downloaded',
+  UPDATE_ERROR: 'diff-king-update-error',
+  UPDATE_START_DOWNLOAD: 'diff-king-update-start-download',
+  UPDATE_INSTALL: 'diff-king-update-install',
 } as const;
 
 // Storage Keys

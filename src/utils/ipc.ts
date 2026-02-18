@@ -60,3 +60,40 @@ export const printJob = async (html: string): Promise<{
     return { success: false, error: (error as Error).message };
   }
 };
+
+// Auto-update IPC wrappers
+export const onUpdateAvailable = (callback: (info: { version: string }) => void): void => {
+  if (isElectronAvailable()) {
+    window.electronAPI.onUpdateAvailable(callback);
+  }
+};
+
+export const onUpdateProgress = (callback: (info: { percent: number }) => void): void => {
+  if (isElectronAvailable()) {
+    window.electronAPI.onUpdateProgress(callback);
+  }
+};
+
+export const onUpdateDownloaded = (callback: () => void): void => {
+  if (isElectronAvailable()) {
+    window.electronAPI.onUpdateDownloaded(callback);
+  }
+};
+
+export const onUpdateError = (callback: (info: { message: string }) => void): void => {
+  if (isElectronAvailable()) {
+    window.electronAPI.onUpdateError(callback);
+  }
+};
+
+export const startUpdateDownload = (): void => {
+  if (isElectronAvailable()) {
+    window.electronAPI.startUpdateDownload();
+  }
+};
+
+export const installUpdate = (): void => {
+  if (isElectronAvailable()) {
+    window.electronAPI.installUpdate();
+  }
+};

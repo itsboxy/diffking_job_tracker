@@ -1830,3 +1830,72 @@ h1, h2, h3, h4 {
 .calendar-modal-actions .danger {
   margin-left: auto;
 }
+
+/* Auto-update banner */
+.update-banner {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 12px 24px;
+  background: var(--accent-primary);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.2);
+}
+
+.update-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  white-space: nowrap;
+}
+
+.update-btn.primary {
+  background: #fff;
+  color: var(--accent-primary);
+}
+
+.update-btn.primary:hover {
+  background: #f0f0f0;
+}
+
+.update-btn.secondary {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.update-btn.secondary:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.update-btn .icon {
+  width: 14px;
+  height: 14px;
+}
+
+.update-progress-bar {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.update-progress-fill {
+  height: 100%;
+  background: #fff;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
