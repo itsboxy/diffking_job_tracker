@@ -1,16 +1,19 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   CalendarDays,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Plus,
   Trash2,
+  UserX,
   X,
+  XCircle,
 } from 'lucide-react';
 import { RootState } from '../store';
 import { addBooking, updateBooking, deleteBooking } from '../store/bookingReducer';
-import { Booking, Customer } from '../types';
+import { Booking, BookingStatus, Customer } from '../types';
 import Toast from '../components/Toast';
 import SideNav from '../components/SideNav';
 
@@ -39,6 +42,19 @@ const todayKey = (): string => {
   return formatDateKey(now.getFullYear(), now.getMonth(), now.getDate());
 };
 
+const formatDateDisplay = (dateKey: string): string => {
+  const [year, month, day] = dateKey.split('-').map(Number);
+  const d = new Date(year, month - 1, day);
+  return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+};
+
+const STATUS_CONFIG: Record<BookingStatus, { label: string; className: string }> = {
+  confirmed: { label: 'Confirmed', className: 'status-confirmed' },
+  completed: { label: 'Completed', className: 'status-completed' },
+  'no-show': { label: 'No Show', className: 'status-no-show' },
+  cancelled: { label: 'Cancelled', className: 'status-cancelled' },
+};
+
 const CalendarScreen: React.FC = () => {
   const dispatch = useDispatch();
   const bookings = useSelector((state: RootState) => state.bookings.bookings);
@@ -60,6 +76,62 @@ const CalendarScreen: React.FC = () => {
   const [formModel, setFormModel] = useState('');
   const [formOther, setFormOther] = useState('');
   const [formQuote, setFormQuote] = useState('');
+  const [formStatus, setFormStatus] = useState<BookingStatus>('confirmed');
+
+  // ── Drag-and-drop state ──────────────────────────────────────────────────
+  const [draggingBookingId, setDraggingBookingId] = useState<string | null>(null);
+  const [dragOverDate, setDragOverDate] = useState<string | null>(null);
+  // Prevent click-to-edit firing immediately after a drag ends
+  const dragJustEndedRef = useRef(false);
+
+  const handleDragStart = (booking: Booking, e: React.DragEvent) => {
+    setDraggingBookingId(booking.id);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', booking.id);
+  };
+
+  const handleDragEnd = () => {
+    setDraggingBookingId(null);
+    setDragOverDate(null);
+    // Suppress the next click so drag-end doesn't open the edit modal
+    dragJustEndedRef.current = true;
+    setTimeout(() => { dragJustEndedRef.current = false; }, 150);
+  };
+
+  const handleDayDragOver = (isPast: boolean, e: React.DragEvent) => {
+    if (isPast || !draggingBookingId) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDayDragEnter = (dateKey: string, isPast: boolean, e: React.DragEvent) => {
+    if (isPast || !draggingBookingId) return;
+    e.preventDefault();
+    setDragOverDate(dateKey);
+  };
+
+  const handleDayDragLeave = (e: React.DragEvent) => {
+    // Only clear when truly leaving the cell (not entering a child element)
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setDragOverDate(null);
+    }
+  };
+
+  const handleDrop = (dateKey: string, isPast: boolean, e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOverDate(null);
+    setDraggingBookingId(null);
+    if (isPast) return;
+
+    const bookingId = e.dataTransfer.getData('text/plain');
+    const booking = bookings.find((b) => b.id === bookingId && !b.isDeleted);
+    if (!booking) return;
+    if (booking.date === dateKey) return; // dropped on same day — no-op
+
+    dispatch(updateBooking({ ...booking, date: dateKey }));
+    setToast(`"${booking.customerName}" moved to ${formatDateDisplay(dateKey)}`);
+  };
+  // ────────────────────────────────────────────────────────────────────────
 
   // Customer autocomplete
   const customers = useMemo((): Customer[] => {
@@ -145,7 +217,8 @@ const CalendarScreen: React.FC = () => {
     setCurrentYear(n.getFullYear());
   };
 
-  const openAddModal = (dateKey: string) => {
+  const openAddModal = (dateKey: string, isPast: boolean) => {
+    if (isPast || draggingBookingId) return;
     setModalDate(dateKey);
     setEditingBooking(null);
     setFormName('');
@@ -154,9 +227,11 @@ const CalendarScreen: React.FC = () => {
     setFormModel('');
     setFormOther('');
     setFormQuote('');
+    setFormStatus('confirmed');
   };
 
   const openEditModal = (booking: Booking) => {
+    if (dragJustEndedRef.current) return;
     setModalDate(booking.date);
     setEditingBooking(booking);
     setFormName(booking.customerName);
@@ -165,11 +240,19 @@ const CalendarScreen: React.FC = () => {
     setFormModel(booking.carModel);
     setFormOther(booking.carOther || '');
     setFormQuote(booking.quote ? String(booking.quote) : '');
+    setFormStatus(booking.status ?? 'confirmed');
   };
 
   const closeModal = () => {
     setModalDate(null);
     setEditingBooking(null);
+  };
+
+  // Quick-set status directly from booking card without opening full modal
+  const handleQuickStatus = (booking: Booking, status: BookingStatus, e: React.MouseEvent) => {
+    e.stopPropagation();
+    dispatch(updateBooking({ ...booking, status }));
+    setToast(`Marked as ${STATUS_CONFIG[status].label}`);
   };
 
   const handleSubmit = (event: React.FormEvent) => {
@@ -186,6 +269,7 @@ const CalendarScreen: React.FC = () => {
         carOther: formOther.trim() || undefined,
         quote: Number(formQuote) || 0,
         date: modalDate,
+        status: formStatus,
       }));
       setToast('Booking updated!');
     } else {
@@ -198,6 +282,7 @@ const CalendarScreen: React.FC = () => {
         carOther: formOther.trim() || undefined,
         quote: Number(formQuote) || 0,
         date: modalDate,
+        status: formStatus,
       };
       dispatch(addBooking(booking));
       setToast(`Booking #${nextBookingId} created!`);
@@ -227,7 +312,7 @@ const CalendarScreen: React.FC = () => {
                 <CalendarDays className="icon" />
                 Calendar
               </h1>
-              <p className="muted">Car drop-off bookings</p>
+              <p className="muted">Car drop-off bookings — drag to reschedule</p>
             </div>
           </header>
 
@@ -244,6 +329,16 @@ const CalendarScreen: React.FC = () => {
             </button>
           </div>
 
+          {/* Legend */}
+          <div className="calendar-legend">
+            {(Object.keys(STATUS_CONFIG) as BookingStatus[]).map((s) => (
+              <span key={s} className={`calendar-legend-item ${STATUS_CONFIG[s].className}`}>
+                {STATUS_CONFIG[s].label}
+              </span>
+            ))}
+            <span className="calendar-legend-hint">Drag a booking to reschedule it</span>
+          </div>
+
           <div className="calendar-grid">
             {WEEKDAYS.map((day) => (
               <div className="calendar-weekday" key={day}>{day}</div>
@@ -256,29 +351,87 @@ const CalendarScreen: React.FC = () => {
 
               const dayBookings = bookingsByDate.get(cell.dateKey) || [];
               const isToday = cell.dateKey === today;
+              const isPast = cell.dateKey < today;
+              const isDropTarget = dragOverDate === cell.dateKey && !isPast;
+
+              let dayClass = 'calendar-day';
+              if (isToday) dayClass += ' today';
+              else if (isPast) dayClass += ' past';
+              if (isDropTarget) dayClass += ' drag-over';
 
               return (
                 <div
-                  className={`calendar-day ${isToday ? 'today' : ''}`}
+                  className={dayClass}
                   key={cell.dateKey}
-                  onClick={() => openAddModal(cell.dateKey)}
+                  onClick={() => openAddModal(cell.dateKey, isPast)}
+                  title={isPast ? undefined : 'Click to add booking'}
+                  onDragOver={(e) => handleDayDragOver(isPast, e)}
+                  onDragEnter={(e) => handleDayDragEnter(cell.dateKey, isPast, e)}
+                  onDragLeave={handleDayDragLeave}
+                  onDrop={(e) => handleDrop(cell.dateKey, isPast, e)}
                 >
                   <div className="calendar-day-number">{cell.day}</div>
                   <div className="calendar-day-bookings">
-                    {dayBookings.map((b) => (
-                      <div
-                        className="calendar-booking-card"
-                        key={b.id}
-                        onClick={(e) => { e.stopPropagation(); openEditModal(b); }}
-                      >
-                        <span className="booking-name">{b.customerName}</span>
-                        <span className="booking-phone">{b.phoneNumber}</span>
-                        <span className="booking-car">
-                          {b.carMake} {b.carModel}{b.carOther ? ` - ${b.carOther}` : ''}
-                        </span>
-                        {b.quote > 0 && <span className="booking-quote">${b.quote.toFixed(2)}</span>}
-                      </div>
-                    ))}
+                    {dayBookings.map((b) => {
+                      const status = b.status ?? 'confirmed';
+                      const isDragging = draggingBookingId === b.id;
+                      return (
+                        <div
+                          className={`calendar-booking-card ${STATUS_CONFIG[status].className}${isDragging ? ' dragging' : ''}`}
+                          key={b.id}
+                          draggable
+                          onDragStart={(e) => handleDragStart(b, e)}
+                          onDragEnd={handleDragEnd}
+                          onClick={(e) => { e.stopPropagation(); openEditModal(b); }}
+                        >
+                          <div className="booking-card-top">
+                            <span className="booking-name">{b.customerName}</span>
+                            <span className={`booking-status-badge ${STATUS_CONFIG[status].className}`}>
+                              {STATUS_CONFIG[status].label}
+                            </span>
+                          </div>
+                          <span className="booking-phone">{b.phoneNumber}</span>
+                          <span className="booking-car">
+                            {b.carMake} {b.carModel}{b.carOther ? ` — ${b.carOther}` : ''}
+                          </span>
+                          {b.quote > 0 && <span className="booking-quote">${b.quote.toFixed(2)}</span>}
+                          {/* Quick-action status buttons (hidden while dragging) */}
+                          {!isDragging && status !== 'completed' && status !== 'cancelled' && (
+                            <div className="booking-quick-actions">
+                              <button
+                                type="button"
+                                className="quick-action-btn completed"
+                                title="Mark Completed"
+                                onClick={(e) => handleQuickStatus(b, 'completed', e)}
+                              >
+                                <CheckCircle2 size={12} />
+                              </button>
+                              <button
+                                type="button"
+                                className="quick-action-btn no-show"
+                                title="Mark No Show"
+                                onClick={(e) => handleQuickStatus(b, 'no-show', e)}
+                              >
+                                <UserX size={12} />
+                              </button>
+                              <button
+                                type="button"
+                                className="quick-action-btn cancelled"
+                                title="Cancel Booking"
+                                onClick={(e) => handleQuickStatus(b, 'cancelled', e)}
+                              >
+                                <XCircle size={12} />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {/* Drop-target placeholder shown when dragging over an empty day */}
+                    {isDropTarget && dayBookings.length === 0 && (
+                      <div className="booking-drop-placeholder" />
+                    )}
                   </div>
                 </div>
               );
@@ -363,10 +516,28 @@ const CalendarScreen: React.FC = () => {
                   step="0.01"
                 />
               </label>
+
+              {/* Status selector */}
+              <div>
+                <span className="calendar-modal-status-label">Status</span>
+                <div className="calendar-modal-status-group">
+                  {(Object.keys(STATUS_CONFIG) as BookingStatus[]).map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      className={`status-btn ${STATUS_CONFIG[s].className} ${formStatus === s ? 'active' : ''}`}
+                      onClick={() => setFormStatus(s)}
+                    >
+                      {STATUS_CONFIG[s].label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="calendar-modal-actions">
                 <button type="submit" className="primary">
                   <Plus className="icon" />
-                  {editingBooking ? 'Save' : 'Add Booking'}
+                  {editingBooking ? 'Save Changes' : 'Add Booking'}
                 </button>
                 {editingBooking && (
                   <button type="button" className="danger" onClick={handleDelete}>

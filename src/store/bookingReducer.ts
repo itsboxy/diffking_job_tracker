@@ -84,7 +84,7 @@ const bookingReducer = (state = initialState, action: BookingAction): BookingSta
     case ADD_BOOKING:
       return {
         ...state,
-        bookings: [withUpdatedAt(action.payload), ...state.bookings],
+        bookings: [withUpdatedAt({ status: 'confirmed', ...action.payload }), ...state.bookings],
       };
     case UPDATE_BOOKING:
       return {

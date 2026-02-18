@@ -1729,6 +1729,20 @@ h1, h2, h3, h4 {
   background: var(--bg-secondary);
 }
 
+.calendar-day.past {
+  cursor: default;
+  opacity: 0.55;
+  background: var(--bg-secondary);
+}
+
+.calendar-day.past:hover {
+  background: var(--bg-secondary);
+}
+
+.calendar-day.past .calendar-day-number {
+  color: var(--text-tertiary, var(--text-secondary));
+}
+
 .calendar-day-number {
   font-size: 12px;
   font-weight: 500;
@@ -1762,6 +1776,46 @@ h1, h2, h3, h4 {
   box-shadow: var(--shadow-sm);
 }
 
+/* Drag-and-drop */
+.calendar-booking-card[draggable] {
+  cursor: grab;
+}
+.calendar-booking-card[draggable]:active {
+  cursor: grabbing;
+}
+.calendar-booking-card.dragging {
+  opacity: 0.35;
+  transform: scale(0.96);
+  box-shadow: none;
+}
+
+.calendar-day.drag-over {
+  background: color-mix(in srgb, var(--accent-primary) 10%, var(--surface));
+  box-shadow: inset 0 0 0 2px var(--accent-primary);
+}
+.calendar-day.past.drag-over {
+  background: var(--bg-secondary);
+  box-shadow: none;
+}
+
+.booking-drop-placeholder {
+  height: 28px;
+  border: 2px dashed var(--accent-primary);
+  border-radius: var(--radius-sm);
+  animation: dropPlaceholderPulse 0.9s ease-in-out infinite alternate;
+}
+@keyframes dropPlaceholderPulse {
+  from { opacity: 0.35; }
+  to   { opacity: 0.75; }
+}
+
+.calendar-legend-hint {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
 .booking-name {
   font-weight: 600;
   color: var(--text-primary);
@@ -1785,6 +1839,132 @@ h1, h2, h3, h4 {
 .booking-quote {
   font-weight: 600;
   color: var(--accent-primary);
+}
+
+/* Booking card status colour coding */
+.calendar-booking-card.status-confirmed {
+  border-left-color: var(--accent-primary);
+}
+.calendar-booking-card.status-completed {
+  border-left-color: #22c55e;
+  background: color-mix(in srgb, #22c55e 8%, var(--surface));
+}
+.calendar-booking-card.status-no-show {
+  border-left-color: #f97316;
+  background: color-mix(in srgb, #f97316 8%, var(--surface));
+  opacity: 0.85;
+}
+.calendar-booking-card.status-cancelled {
+  border-left-color: var(--border-light);
+  background: var(--bg-secondary);
+  opacity: 0.6;
+}
+
+/* Booking card top row: name + status badge */
+.booking-card-top {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  justify-content: space-between;
+}
+
+/* Status badge on booking card */
+.booking-status-badge {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 1px 4px;
+  border-radius: 3px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.booking-status-badge.status-confirmed {
+  background: color-mix(in srgb, var(--accent-primary) 15%, transparent);
+  color: var(--accent-primary);
+}
+.booking-status-badge.status-completed {
+  background: color-mix(in srgb, #22c55e 18%, transparent);
+  color: #16a34a;
+}
+.booking-status-badge.status-no-show {
+  background: color-mix(in srgb, #f97316 18%, transparent);
+  color: #c2410c;
+}
+.booking-status-badge.status-cancelled {
+  background: var(--border-light);
+  color: var(--text-secondary);
+}
+
+/* Quick-action icon buttons on booking cards */
+.booking-quick-actions {
+  display: none;
+  gap: 3px;
+  margin-top: 3px;
+}
+.calendar-booking-card:hover .booking-quick-actions {
+  display: flex;
+}
+.quick-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  padding: 0;
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+}
+.quick-action-btn:hover {
+  opacity: 0.8;
+  transform: scale(1.15);
+}
+.quick-action-btn.completed {
+  background: #22c55e;
+  color: #fff;
+}
+.quick-action-btn.no-show {
+  background: #f97316;
+  color: #fff;
+}
+.quick-action-btn.cancelled {
+  background: var(--text-secondary);
+  color: #fff;
+}
+
+/* Calendar legend */
+.calendar-legend {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  flex-wrap: wrap;
+}
+.calendar-legend-item {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.calendar-legend-item.status-confirmed {
+  background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
+  color: var(--accent-primary);
+}
+.calendar-legend-item.status-completed {
+  background: color-mix(in srgb, #22c55e 15%, transparent);
+  color: #16a34a;
+}
+.calendar-legend-item.status-no-show {
+  background: color-mix(in srgb, #f97316 15%, transparent);
+  color: #c2410c;
+}
+.calendar-legend-item.status-cancelled {
+  background: var(--border-light);
+  color: var(--text-secondary);
 }
 
 /* Calendar Modal */
@@ -1857,6 +2037,61 @@ h1, h2, h3, h4 {
 
 .calendar-modal-actions .danger {
   margin-left: auto;
+}
+
+/* Modal status selector */
+.calendar-modal-status-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-2);
+}
+
+.calendar-modal-status-group {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.status-btn {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: var(--radius-sm);
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  height: auto;
+}
+.status-btn:hover {
+  opacity: 0.85;
+}
+.status-btn.status-confirmed.active,
+.status-btn.status-confirmed:hover {
+  background: color-mix(in srgb, var(--accent-primary) 15%, transparent);
+  color: var(--accent-primary);
+  border-color: var(--accent-primary);
+}
+.status-btn.status-completed.active,
+.status-btn.status-completed:hover {
+  background: color-mix(in srgb, #22c55e 15%, transparent);
+  color: #16a34a;
+  border-color: #22c55e;
+}
+.status-btn.status-no-show.active,
+.status-btn.status-no-show:hover {
+  background: color-mix(in srgb, #f97316 15%, transparent);
+  color: #c2410c;
+  border-color: #f97316;
+}
+.status-btn.status-cancelled.active,
+.status-btn.status-cancelled:hover {
+  background: var(--border-light);
+  color: var(--text-secondary);
+  border-color: var(--border-light);
 }
 
 /* Auto-update banner */

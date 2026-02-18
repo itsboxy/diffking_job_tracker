@@ -97,3 +97,9 @@ export const installUpdate = (): void => {
     window.electronAPI.installUpdate();
   }
 };
+
+export const checkForUpdates = (): void => {
+  if (isElectronAvailable()) {
+    window.electronAPI.checkForUpdates();
+  }
+};

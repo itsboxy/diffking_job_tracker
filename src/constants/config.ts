@@ -10,6 +10,7 @@ export const IPC_CHANNELS = {
   UPDATE_ERROR: 'diff-king-update-error',
   UPDATE_START_DOWNLOAD: 'diff-king-update-start-download',
   UPDATE_INSTALL: 'diff-king-update-install',
+  UPDATE_CHECK: 'diff-king-update-check',
 } as const;
 
 // Storage Keys

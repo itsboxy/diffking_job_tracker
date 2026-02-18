@@ -212,12 +212,32 @@ app.whenReady().then(() => {
     });
 
     // Auto-update IPC handlers
+    // Track whether the user explicitly requested a download so we can
+    // distinguish download failures from silent background-check failures.
+    let updateDownloadRequested = false;
+
     ipcMain.on(IPC_CHANNELS.UPDATE_START_DOWNLOAD, () => {
-        autoUpdater.downloadUpdate();
+        updateDownloadRequested = true;
+        autoUpdater.downloadUpdate().catch((err) => {
+            console.error('Failed to start update download:', err);
+            updateDownloadRequested = false;
+            if (mainWindow) {
+                mainWindow.webContents.send(IPC_CHANNELS.UPDATE_ERROR, {
+                    message: err?.message || 'Failed to start download',
+                });
+            }
+        });
     });
 
     ipcMain.on(IPC_CHANNELS.UPDATE_INSTALL, () => {
         autoUpdater.quitAndInstall();
+    });
+
+    // Allow the renderer to trigger a manual re-check
+    ipcMain.on(IPC_CHANNELS.UPDATE_CHECK, () => {
+        autoUpdater.checkForUpdates().catch((err) => {
+            console.warn('Manual update check failed:', err?.message ?? err);
+        });
     });
 
     createWindow();
@@ -225,8 +245,15 @@ app.whenReady().then(() => {
     // Auto-update setup
     autoUpdater.autoDownload = false;
     autoUpdater.autoInstallOnAppQuit = true;
+    autoUpdater.allowPrerelease = false;
+
+    autoUpdater.on('update-not-available', () => {
+        console.log('No update available — app is up to date');
+        updateDownloadRequested = false;
+    });
 
     autoUpdater.on('update-available', (info) => {
+        console.log('Update available:', info.version);
         if (mainWindow) {
             mainWindow.webContents.send(IPC_CHANNELS.UPDATE_AVAILABLE, {
                 version: info.version,
@@ -243,26 +270,33 @@ app.whenReady().then(() => {
     });
 
     autoUpdater.on('update-downloaded', () => {
+        updateDownloadRequested = false;
         if (mainWindow) {
             mainWindow.webContents.send(IPC_CHANNELS.UPDATE_DOWNLOADED);
         }
     });
 
     autoUpdater.on('error', (error) => {
-        console.error('Auto-update error:', error);
-        if (mainWindow) {
+        console.error('Auto-update error:', error?.message ?? error);
+        // Only notify the renderer when the user actively requested a download.
+        // Background check failures (network unavailable, 404 for latest.yml, etc.)
+        // are logged but otherwise silent so as not to show spurious error banners.
+        if (updateDownloadRequested && mainWindow) {
+            updateDownloadRequested = false;
             mainWindow.webContents.send(IPC_CHANNELS.UPDATE_ERROR, {
-                message: error?.message || 'Update check failed',
+                message: error?.message || 'Update failed',
             });
         }
     });
 
-    // Check for updates after a short delay
-    setTimeout(() => {
+    // Check for updates 8 seconds after launch, then every 4 hours
+    const runUpdateCheck = () => {
         autoUpdater.checkForUpdates().catch((err) => {
-            console.warn('Update check failed:', err);
+            console.warn('Update check failed:', err?.message ?? err);
         });
-    }, 5000);
+    };
+    setTimeout(runUpdateCheck, 8000);
+    setInterval(runUpdateCheck, 4 * 60 * 60 * 1000);
 });
 
 app.on('window-all-closed', () => {

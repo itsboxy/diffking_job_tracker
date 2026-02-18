@@ -11,6 +11,7 @@ interface ElectronAPI {
   onUpdateError: (callback: (info: { message: string }) => void) => void;
   startUpdateDownload: () => void;
   installUpdate: () => void;
+  checkForUpdates: () => void;
 }
 
 declare global {

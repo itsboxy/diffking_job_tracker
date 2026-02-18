@@ -96,6 +96,8 @@ export interface Query {
     deletedAt?: string;
 }
 
+export type BookingStatus = 'confirmed' | 'completed' | 'no-show' | 'cancelled';
+
 export interface Booking {
     id: string;
     customerName: string;
@@ -105,6 +107,7 @@ export interface Booking {
     carOther?: string;
     quote: number;
     date: string;
+    status?: BookingStatus;
     updatedAt?: string;
     isDeleted?: boolean;
     deletedAt?: string;

@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { Download, RefreshCw, X } from 'lucide-react';
+import { AlertCircle, Download, RefreshCw, X } from 'lucide-react';
 import {
+  checkForUpdates,
+  installUpdate,
   onUpdateAvailable,
-  onUpdateProgress,
   onUpdateDownloaded,
   onUpdateError,
+  onUpdateProgress,
   startUpdateDownload,
-  installUpdate,
 } from '../utils/ipc';
 
 type UpdateState = 'idle' | 'available' | 'downloading' | 'ready' | 'error';
@@ -15,6 +16,7 @@ const UpdateNotification: React.FC = () => {
   const [state, setState] = useState<UpdateState>('idle');
   const [version, setVersion] = useState('');
   const [progress, setProgress] = useState(0);
+  const [errorMessage, setErrorMessage] = useState('');
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
@@ -33,10 +35,11 @@ const UpdateNotification: React.FC = () => {
       setState('ready');
     });
 
-    onUpdateError(() => {
-      // Only show error if we were actively downloading — background check
-      // failures (network issues, no release found, etc.) should be silent.
-      setState((prev) => (prev === 'downloading' ? 'error' : 'idle'));
+    onUpdateError((info) => {
+      // Only the main process sends UPDATE_ERROR when a user-initiated download
+      // fails, so we can always show the error here.
+      setErrorMessage(info.message || 'Update failed');
+      setState('error');
     });
   }, []);
 
@@ -44,12 +47,25 @@ const UpdateNotification: React.FC = () => {
     return null;
   }
 
+  const handleDownload = () => {
+    // Set downloading immediately so any subsequent error is shown correctly.
+    setProgress(0);
+    setState('downloading');
+    startUpdateDownload();
+  };
+
+  const handleRetry = () => {
+    setState('idle');
+    setErrorMessage('');
+    checkForUpdates();
+  };
+
   return (
     <div className="update-banner">
       {state === 'available' && (
         <>
           <span>Version {version} is available</span>
-          <button type="button" className="update-btn primary" onClick={() => startUpdateDownload()}>
+          <button type="button" className="update-btn primary" onClick={handleDownload}>
             <Download className="icon" />
             Update Now
           </button>
@@ -61,7 +77,7 @@ const UpdateNotification: React.FC = () => {
 
       {state === 'downloading' && (
         <>
-          <span>Downloading update... {progress}%</span>
+          <span>Downloading update… {progress}%</span>
           <div className="update-progress-bar">
             <div className="update-progress-fill" style={{ width: `${progress}%` }} />
           </div>
@@ -83,7 +99,12 @@ const UpdateNotification: React.FC = () => {
 
       {state === 'error' && (
         <>
-          <span>Update check failed</span>
+          <AlertCircle className="icon" />
+          <span title={errorMessage}>Update failed — {errorMessage || 'please try again'}</span>
+          <button type="button" className="update-btn primary" onClick={handleRetry}>
+            <RefreshCw className="icon" />
+            Try Again
+          </button>
           <button type="button" className="update-btn secondary" onClick={() => setDismissed(true)}>
             <X className="icon" />
             Dismiss
