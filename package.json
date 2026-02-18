@@ -1,6 +1,6 @@
 {
   "name": "diff-king-job-tracker",
-  "version": "4.1.1",
+  "version": "4.1.2",
   "description": "A job tracker application for Diff King, including Repair, Fabrication, and Deliveries and Dispatch categories.",
   "main": "dist/main.js",
   "scripts": {

@@ -34,7 +34,9 @@ const UpdateNotification: React.FC = () => {
     });
 
     onUpdateError(() => {
-      setState('error');
+      // Only show error if we were actively downloading — background check
+      // failures (network issues, no release found, etc.) should be silent.
+      setState((prev) => (prev === 'downloading' ? 'error' : 'idle'));
     });
   }, []);
 

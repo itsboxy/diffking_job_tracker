@@ -282,6 +282,7 @@ button, .primary, .secondary, .danger {
   justify-content: center;
   gap: var(--space-1);
   padding: var(--space-2) var(--space-3);
+  height: 34px;
   border-radius: var(--radius-md);
   font-size: 12px;
   font-weight: 500;
@@ -289,7 +290,8 @@ button, .primary, .secondary, .danger {
   cursor: pointer;
   transition: all var(--transition-fast);
   border: 1px solid transparent;
-  line-height: 1.4;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .primary {
@@ -543,6 +545,7 @@ textarea {
   align-items: center;
   justify-content: space-between;
   width: 100%;
+  height: auto;
   padding: var(--space-3) var(--space-4);
   background: transparent;
   border: none;
@@ -941,9 +944,10 @@ textarea {
 .status-select {
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
-  min-width: 100px;
+  min-width: 110px;
+  height: 34px;
 }
 
 .status-select.status-not-started { border-color: var(--danger); color: var(--danger); }
@@ -956,8 +960,6 @@ textarea {
   background: var(--success-light);
   color: var(--success);
   border-color: var(--success);
-  font-size: 11px;
-  padding: var(--space-1) var(--space-3);
 }
 
 .add-payment-btn:hover {
@@ -973,14 +975,15 @@ textarea {
 }
 
 .menu-trigger {
-  width: 28px;
-  height: 28px;
+  width: 34px;
+  height: 34px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-medium);
   background: var(--surface);
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
   padding: 0;
 }
 
@@ -991,7 +994,7 @@ textarea {
 .menu-panel {
   position: absolute;
   right: 0;
-  bottom: calc(100% + 4px);
+  top: calc(100% + 4px);
   background: var(--surface);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-lg);
@@ -1003,6 +1006,7 @@ textarea {
 
 .menu-panel button {
   width: 100%;
+  height: auto;
   padding: var(--space-2) var(--space-3);
   text-align: left;
   border: none;
@@ -1012,6 +1016,8 @@ textarea {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  border-radius: 0;
+  white-space: normal;
 }
 
 .menu-panel button:hover {
@@ -1183,6 +1189,7 @@ textarea {
   border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
   padding: var(--space-2);
+  height: auto;
   cursor: pointer;
   transition: all var(--transition-fast);
 }
@@ -1818,6 +1825,7 @@ h1, h2, h3, h4 {
 .calendar-modal-close {
   background: none;
   border: none;
+  height: auto;
   cursor: pointer;
   padding: var(--space-1);
   color: var(--text-secondary);
