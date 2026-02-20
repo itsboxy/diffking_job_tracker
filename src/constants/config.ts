@@ -11,6 +11,7 @@ export const IPC_CHANNELS = {
   UPDATE_START_DOWNLOAD: 'diff-king-update-start-download',
   UPDATE_INSTALL: 'diff-king-update-install',
   UPDATE_CHECK: 'diff-king-update-check',
+  OPEN_URL: 'diff-king-open-url',
 } as const;
 
 // Storage Keys
@@ -35,6 +36,7 @@ export const TIMING = {
   ARCHIVE_CHECK_INTERVAL_MS: 60 * 60 * 1000, // 1 hour
   ARCHIVE_AFTER_DAYS: 60,
   AUDIT_LIMIT: 200,
+  FILE_WRITE_DEBOUNCE_MS: 600, // debounce disk writes to reduce I/O
 } as const;
 
 // Urgency Thresholds (in days)
@@ -46,8 +48,10 @@ export const URGENCY_THRESHOLDS = {
 
 // Window Dimensions
 export const WINDOW_CONFIG = {
-  DEFAULT_WIDTH: 800,
-  DEFAULT_HEIGHT: 600,
+  DEFAULT_WIDTH: 1280,
+  DEFAULT_HEIGHT: 760,
+  MIN_WIDTH: 900,
+  MIN_HEIGHT: 600,
   PRINT_WIDTH: 800,
   PRINT_HEIGHT: 600,
 } as const;

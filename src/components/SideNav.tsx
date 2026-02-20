@@ -1,17 +1,13 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Archive, CalendarDays, ClipboardList, HelpCircle, LayoutDashboard, Settings as SettingsIcon } from 'lucide-react';
+import { Archive, BookOpen, CalendarDays, ClipboardList, HelpCircle, Layers, LayoutDashboard, Search, Settings as SettingsIcon, Wrench } from 'lucide-react';
 import Logo from './Logo';
 
 const SideNav: React.FC = () => {
   return (
     <aside className="side-nav">
       <div className="side-nav-header">
-        <Logo size={36} showText={false} />
-        <div>
-          <h2>Diff King</h2>
-          <span>Job Tracker</span>
-        </div>
+        <Logo size={36} showText={true} />
       </div>
       <nav className="side-nav-links">
         <NavLink to="/" exact className="side-nav-link" activeClassName="active">
@@ -37,6 +33,23 @@ const SideNav: React.FC = () => {
         <NavLink to="/settings" className="side-nav-link" activeClassName="active">
           <SettingsIcon className="icon" />
           Settings
+        </NavLink>
+
+        <div className="side-nav-section-label">
+          <BookOpen className="icon" />
+          Handbook
+        </div>
+        <NavLink to="/handbook/repair" className="side-nav-link side-nav-sublink" activeClassName="active">
+          <Wrench className="icon" />
+          Repair
+        </NavLink>
+        <NavLink to="/handbook/fabrication" className="side-nav-link side-nav-sublink" activeClassName="active">
+          <Layers className="icon" />
+          Fabrication
+        </NavLink>
+        <NavLink to="/bearing-search" className="side-nav-link side-nav-sublink" activeClassName="active">
+          <Search className="icon" />
+          Bearing Search
         </NavLink>
       </nav>
     </aside>

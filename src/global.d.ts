@@ -12,6 +12,7 @@ interface ElectronAPI {
   startUpdateDownload: () => void;
   installUpdate: () => void;
   checkForUpdates: () => void;
+  openUrl: (url: string) => void;
 }
 
 declare global {

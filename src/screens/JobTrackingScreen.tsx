@@ -275,7 +275,7 @@ const JobTrackingScreen: React.FC = () => {
       const html = generateJobPrintHtml(job, settings.logoDataUrl);
       const result = await printJob(html);
       if (result && result.success === false) {
-        window.alert(result.error || 'Unable to print job.');
+        setToast(result.error || 'Unable to print job.');
         break;
       }
     }
@@ -286,55 +286,35 @@ const JobTrackingScreen: React.FC = () => {
       const html = generateJobPrintHtml(job, settings.logoDataUrl);
       const result = await generateJobPDF(html, job.id);
       if (result && result.success === false) {
-        window.alert(result.error || 'Unable to save PDF.');
+        setToast(result.error || 'Unable to save PDF.');
         break;
       }
     }
   };
 
   const handleSavePdf = async (job: Job) => {
-    console.log('handleSavePdf called for job:', job.id);
     try {
-      if (!('electronAPI' in window)) {
-        alert('Electron API not available. Please restart the application.');
-        console.error('electronAPI not found on window object');
-        return;
-      }
       const html = generateJobPrintHtml(job, settings.logoDataUrl);
-      console.log('Generated HTML, calling generateJobPDF...');
       const result = await generateJobPDF(html, job.id);
-      console.log('PDF result:', result);
       if (result && result.success === false) {
-        alert(result.error || 'Unable to save PDF.');
+        setToast(result.error || 'Unable to save PDF.');
       } else if (result && result.success === true) {
-        alert(`PDF saved to: ${result.path}`);
+        setToast('PDF saved — file opened in Explorer.');
       }
     } catch (error) {
-      console.error('Error in handleSavePdf:', error);
-      alert(`Error saving PDF: ${(error as Error).message}`);
+      setToast(`Error saving PDF: ${(error as Error).message}`);
     }
   };
 
   const handlePrint = async (job: Job) => {
-    console.log('handlePrint called for job:', job.id);
     try {
-      if (!('electronAPI' in window)) {
-        alert('Electron API not available. Please restart the application.');
-        console.error('electronAPI not found on window object');
-        return;
-      }
       const html = generateJobPrintHtml(job, settings.logoDataUrl);
-      console.log('Generated HTML, calling printJob...');
       const result = await printJob(html);
-      console.log('Print result:', result);
       if (result && result.success === false) {
-        alert(result.error || 'Unable to print job.');
-      } else if (result && result.success === true) {
-        console.log('Print completed successfully');
+        setToast(result.error || 'Unable to print job.');
       }
     } catch (error) {
-      console.error('Error in handlePrint:', error);
-      alert(`Error printing: ${(error as Error).message}`);
+      setToast(`Error printing: ${(error as Error).message}`);
     }
   };
 

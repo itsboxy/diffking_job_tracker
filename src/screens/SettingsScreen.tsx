@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import Logo from '../components/Logo';
 import SideNav from '../components/SideNav';
+import Toast from '../components/Toast';
 import {
   Archive,
   Brush,
@@ -27,6 +28,7 @@ const SettingsScreen: React.FC = () => {
   const jobs = useSelector((state: RootState) => state.jobs.jobs);
   const audit = useSelector((state: RootState) => state.jobs.audit);
   const [syncStatus, setSyncStatus] = useState(getSyncStatus());
+  const [toast, setToast] = useState<string | null>(null);
   const supabaseConfig = getSupabaseConfig();
 
   useEffect(() => {
@@ -120,7 +122,7 @@ const SettingsScreen: React.FC = () => {
         }
         dispatch(setJobs(parsed));
       } catch (error) {
-        window.alert('Unable to import file. Please select a valid JSON export.');
+        setToast('Unable to import file. Please select a valid JSON export.');
       }
     };
     reader.readAsText(file);
@@ -367,6 +369,7 @@ const SettingsScreen: React.FC = () => {
           </div>
         </div>
       </main>
+      {toast ? <Toast message={toast} onClose={() => setToast(null)} /> : null}
     </div>
   );
 };

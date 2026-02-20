@@ -103,3 +103,11 @@ export const checkForUpdates = (): void => {
     window.electronAPI.checkForUpdates();
   }
 };
+
+export const openExternalUrl = (url: string): void => {
+  if (isElectronAvailable()) {
+    window.electronAPI.openUrl(url);
+  } else {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+};

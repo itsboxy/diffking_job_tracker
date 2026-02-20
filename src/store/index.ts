@@ -99,16 +99,24 @@ const saveState = (state: RootState) => {
     return;
   }
 
+  // localStorage is fast (in-memory) — write immediately for data safety
   try {
     window.localStorage.setItem(STORAGE_KEYS.JOBS, JSON.stringify(state));
   } catch (error) {
     console.warn('Unable to save jobs', error);
   }
 
-  const success = writeJobsFile(JSON.stringify(state));
-  if (!success) {
-    console.warn('Unable to save jobs to file');
+  // File write is async disk I/O — debounce to avoid flooding the IPC channel
+  // on every keystroke or rapid state update
+  if (fileWriteTimer) {
+    clearTimeout(fileWriteTimer);
   }
+  fileWriteTimer = setTimeout(() => {
+    const success = writeJobsFile(JSON.stringify(state));
+    if (!success) {
+      console.warn('Unable to save jobs to file');
+    }
+  }, TIMING.FILE_WRITE_DEBOUNCE_MS);
 };
 
 const rootReducer = combineReducers({
@@ -124,6 +132,7 @@ const store = createStore(rootReducer, normalizeState(loadState()) as Partial<Ro
 let isApplyingRemote = false;
 let lastSyncedAuditId: string | undefined;
 let syncTimer: ReturnType<typeof setTimeout> | null = null;
+let fileWriteTimer: ReturnType<typeof setTimeout> | null = null;
 let syncStatus: SupabaseSyncStatus = { state: 'idle' };
 let remoteLoaded = false;
 

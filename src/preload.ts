@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   startUpdateDownload: () => ipcRenderer.send(IPC_CHANNELS.UPDATE_START_DOWNLOAD),
   installUpdate: () => ipcRenderer.send(IPC_CHANNELS.UPDATE_INSTALL),
   checkForUpdates: () => ipcRenderer.send(IPC_CHANNELS.UPDATE_CHECK),
+  openUrl: (url: string) => ipcRenderer.send(IPC_CHANNELS.OPEN_URL, url),
 });
 
 // Provide a minimal process shim for browser-only renderer bundles.

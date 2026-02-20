@@ -28,14 +28,36 @@ const evaluateMathExpression = (expr: string): number => {
   try {
     const tokens = sanitized.match(/(\d+\.?\d*|[+\-*])/g);
     if (!tokens) return 0;
-    let result = parseFloat(tokens[0]) || 0;
-    for (let i = 1; i < tokens.length; i += 2) {
-      const operator = tokens[i];
-      const operand = parseFloat(tokens[i + 1]) || 0;
-      if (operator === '+') result += operand;
-      else if (operator === '-') result -= operand;
-      else if (operator === '*') result *= operand;
+
+    // Separate into parallel arrays of numbers and operators
+    const nums: number[] = [];
+    const ops: string[] = [];
+    for (const token of tokens) {
+      if (token === '+' || token === '-' || token === '*') {
+        ops.push(token);
+      } else {
+        nums.push(parseFloat(token) || 0);
+      }
     }
+
+    // Pass 1: handle multiplication (higher precedence)
+    let i = 0;
+    while (i < ops.length) {
+      if (ops[i] === '*') {
+        nums.splice(i, 2, nums[i] * nums[i + 1]);
+        ops.splice(i, 1);
+      } else {
+        i++;
+      }
+    }
+
+    // Pass 2: handle addition and subtraction left-to-right
+    let result = nums[0] ?? 0;
+    for (let j = 0; j < ops.length; j++) {
+      if (ops[j] === '+') result += nums[j + 1];
+      else if (ops[j] === '-') result -= nums[j + 1];
+    }
+
     return Math.max(0, result);
   } catch {
     return 0;
@@ -187,6 +209,7 @@ const JobEditModal: React.FC<JobEditModalProps> = ({ job, onCancel, onSave }) =>
         </div>
 
         <div className="modal-body">
+          <div className="section-divider"><span>Customer Details</span></div>
           <div className="form-grid">
             <label>
               Customer Name
@@ -265,6 +288,7 @@ const JobEditModal: React.FC<JobEditModalProps> = ({ job, onCancel, onSave }) =>
             </label>
           </div>
 
+          <div className="section-divider"><span>Job Description</span></div>
           <label className={`full-width ${category === 'Fabrication' ? 'description-large' : ''}`}>
             Job Description
             <textarea
@@ -275,6 +299,8 @@ const JobEditModal: React.FC<JobEditModalProps> = ({ job, onCancel, onSave }) =>
           </label>
 
           {category === 'Fabrication' ? (
+            <>
+            <div className="section-divider"><span>Measurements</span></div>
             <section className="measurement-section">
               <div className="items-header">
                 <h3>Measurements</h3>
@@ -329,8 +355,10 @@ const JobEditModal: React.FC<JobEditModalProps> = ({ job, onCancel, onSave }) =>
                 ))}
               </div>
             </section>
+            </>
           ) : null}
 
+          <div className="section-divider"><span>Job Items & Pricing</span></div>
           <div className="items-header">
             <h3>Job Items & Pricing</h3>
             <button type="button" className="secondary" onClick={() => setItems((prev) => [...prev, emptyItem()])}>
@@ -369,6 +397,7 @@ const JobEditModal: React.FC<JobEditModalProps> = ({ job, onCancel, onSave }) =>
             ))}
           </div>
 
+          <div className="section-divider"><span>Attachments</span></div>
           <section className="attachments-section">
             <div className="items-header">
               <h3>Attachments</h3>
@@ -403,6 +432,7 @@ const JobEditModal: React.FC<JobEditModalProps> = ({ job, onCancel, onSave }) =>
             )}
           </section>
 
+          <div className="section-divider"><span>Payment</span></div>
           <div className="form-grid">
             <label>
               Amount Paid

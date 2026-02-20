@@ -40,11 +40,14 @@ const createWindow = () => {
     mainWindow = new BrowserWindow({
         width: WINDOW_CONFIG.DEFAULT_WIDTH,
         height: WINDOW_CONFIG.DEFAULT_HEIGHT,
+        minWidth: WINDOW_CONFIG.MIN_WIDTH,
+        minHeight: WINDOW_CONFIG.MIN_HEIGHT,
         ...(iconPath ? { icon: iconPath } : {}),
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
             preload: path.join(__dirname, 'preload.js'),
+            webviewTag: true,
         },
     });
 
@@ -135,12 +138,10 @@ app.whenReady().then(() => {
     });
 
     ipcMain.on(IPC_CHANNELS.JOBS_WRITE, (_event, payload) => {
-        try {
-            const dataFile = getDataFilePath();
-            fs.writeFileSync(dataFile, payload, 'utf-8');
-        } catch (error) {
-            console.error('Unable to write jobs file', error);
-        }
+        const dataFile = getDataFilePath();
+        fs.writeFile(dataFile, payload, 'utf-8', (err) => {
+            if (err) console.error('Unable to write jobs file', err);
+        });
     });
 
     ipcMain.handle(IPC_CHANNELS.JOB_PDF, async (_event, payload) => {
@@ -240,6 +241,12 @@ app.whenReady().then(() => {
         });
     });
 
+    ipcMain.on(IPC_CHANNELS.OPEN_URL, (_event, url: string) => {
+        if (typeof url === 'string' && (url.startsWith('https://') || url.startsWith('http://'))) {
+            shell.openExternal(url);
+        }
+    });
+
     createWindow();
 
     // Auto-update setup
@@ -277,14 +284,24 @@ app.whenReady().then(() => {
     });
 
     autoUpdater.on('error', (error) => {
-        console.error('Auto-update error:', error?.message ?? error);
-        // Only notify the renderer when the user actively requested a download.
-        // Background check failures (network unavailable, 404 for latest.yml, etc.)
-        // are logged but otherwise silent so as not to show spurious error banners.
-        if (updateDownloadRequested && mainWindow) {
-            updateDownloadRequested = false;
+        const msg = error?.message || String(error);
+        // 404 / ENOTFOUND errors mean no release package exists yet — treat them
+        // as "no update available" rather than a real failure so the user never
+        // sees a confusing "Update failed — 404" banner.
+        const isNoRelease = /404|not found|ENOTFOUND|ECONNREFUSED/i.test(msg);
+
+        if (!isNoRelease) {
+            console.error('Auto-update error:', msg);
+        }
+
+        // Always reset the requested flag
+        const wasRequested = updateDownloadRequested;
+        updateDownloadRequested = false;
+
+        // Only surface real errors to the renderer (not 404 / network misses)
+        if (wasRequested && mainWindow && !isNoRelease) {
             mainWindow.webContents.send(IPC_CHANNELS.UPDATE_ERROR, {
-                message: error?.message || 'Update failed',
+                message: msg || 'Update failed',
             });
         }
     });
