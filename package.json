@@ -52,6 +52,7 @@
     "forceCodeSigning": false,
     "win": {
       "target": "nsis",
+      "artifactName": "${name}-setup-${version}.${ext}",
       "icon": "build/icon.png",
       "signAndEditExecutable": false,
       "signingHashAlgorithms": null
