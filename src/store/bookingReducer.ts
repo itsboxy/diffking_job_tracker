@@ -11,6 +11,7 @@ const initialState: BookingState = {
 const ADD_BOOKING = 'ADD_BOOKING';
 const UPDATE_BOOKING = 'UPDATE_BOOKING';
 const DELETE_BOOKING = 'DELETE_BOOKING';
+const RESTORE_BOOKING = 'RESTORE_BOOKING';
 const SET_BOOKINGS = 'SET_BOOKINGS';
 const REPLACE_BOOKINGS = 'REPLACE_BOOKINGS';
 
@@ -32,6 +33,11 @@ interface DeleteBookingAction {
   };
 }
 
+interface RestoreBookingAction {
+  type: typeof RESTORE_BOOKING;
+  payload: string; // booking id
+}
+
 interface SetBookingsAction {
   type: typeof SET_BOOKINGS;
   payload: Booking[];
@@ -46,6 +52,7 @@ export type BookingAction =
   | AddBookingAction
   | UpdateBookingAction
   | DeleteBookingAction
+  | RestoreBookingAction
   | SetBookingsAction
   | ReplaceBookingsAction;
 
@@ -62,6 +69,11 @@ export const updateBooking = (booking: Booking): UpdateBookingAction => ({
 export const deleteBooking = (id: string): DeleteBookingAction => ({
   type: DELETE_BOOKING,
   payload: { id, deletedAt: new Date().toISOString() },
+});
+
+export const restoreBooking = (id: string): RestoreBookingAction => ({
+  type: RESTORE_BOOKING,
+  payload: id,
 });
 
 export const setBookings = (bookings: Booking[]): SetBookingsAction => ({
@@ -99,6 +111,15 @@ const bookingReducer = (state = initialState, action: BookingAction): BookingSta
         bookings: state.bookings.map((booking) =>
           booking.id === action.payload.id
             ? withUpdatedAt({ ...booking, isDeleted: true, deletedAt: action.payload.deletedAt })
+            : booking
+        ),
+      };
+    case RESTORE_BOOKING:
+      return {
+        ...state,
+        bookings: state.bookings.map((booking) =>
+          booking.id === action.payload
+            ? withUpdatedAt({ ...booking, isDeleted: false, deletedAt: undefined })
             : booking
         ),
       };

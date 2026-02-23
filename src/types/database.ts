@@ -186,6 +186,7 @@ export interface DbBooking {
   car_other?: string;
   quote: number;
   date: string;
+  end_date?: string | null;
   status?: string | null;
   updated_at?: string;
   is_deleted?: boolean;
@@ -202,6 +203,7 @@ export const toDbBooking = (booking: Booking): DbBooking => {
     car_other: booking.carOther,
     quote: booking.quote,
     date: booking.date,
+    end_date: booking.endDate ?? null,
     status: booking.status ?? null,
     updated_at: booking.updatedAt,
     is_deleted: booking.isDeleted,
@@ -219,6 +221,7 @@ export const fromDbBooking = (dbBooking: DbBooking): Booking => {
     carOther: dbBooking.car_other,
     quote: dbBooking.quote,
     date: dbBooking.date,
+    endDate: dbBooking.end_date ?? undefined,
     status: (dbBooking.status ?? undefined) as Booking['status'],
     updatedAt: dbBooking.updated_at,
     isDeleted: dbBooking.is_deleted,

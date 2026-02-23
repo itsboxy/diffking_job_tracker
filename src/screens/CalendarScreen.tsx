@@ -6,13 +6,14 @@ import {
   ChevronLeft,
   ChevronRight,
   Plus,
+  RotateCcw,
   Trash2,
   UserX,
   X,
   XCircle,
 } from 'lucide-react';
 import { RootState } from '../store';
-import { addBooking, updateBooking, deleteBooking } from '../store/bookingReducer';
+import { addBooking, updateBooking, deleteBooking, restoreBooking } from '../store/bookingReducer';
 import { Booking, BookingStatus, Customer } from '../types';
 import Toast from '../components/Toast';
 import SideNav from '../components/SideNav';
@@ -37,6 +38,19 @@ const formatDateKey = (year: number, month: number, day: number): string => {
   return `${year}-${m}-${d}`;
 };
 
+const advanceDateKey = (dateKey: string): string => {
+  const [y, m, d] = dateKey.split('-').map(Number);
+  const next = new Date(y, m - 1, d + 1);
+  return formatDateKey(next.getFullYear(), next.getMonth(), next.getDate());
+};
+
+// Returns 0 (Monday) … 6 (Sunday) — used to detect week row boundaries
+const getDayOfWeek = (dateKey: string): number => {
+  const [y, m, d] = dateKey.split('-').map(Number);
+  const day = new Date(y, m - 1, d).getDay();
+  return day === 0 ? 6 : day - 1;
+};
+
 const todayKey = (): string => {
   const now = new Date();
   return formatDateKey(now.getFullYear(), now.getMonth(), now.getDate());
@@ -53,6 +67,14 @@ const STATUS_CONFIG: Record<BookingStatus, { label: string; className: string }>
   completed: { label: 'Completed', className: 'status-completed' },
   'no-show': { label: 'No Show', className: 'status-no-show' },
   cancelled: { label: 'Cancelled', className: 'status-cancelled' },
+};
+
+type BookingEntry = {
+  booking: Booking;
+  isContinuation: boolean;
+  dayIndex: number;
+  bleedLeft: boolean;  // this slot should bleed into the previous cell
+  bleedRight: boolean; // this slot should bleed into the next cell
 };
 
 const CalendarScreen: React.FC = () => {
@@ -77,13 +99,21 @@ const CalendarScreen: React.FC = () => {
   const [formOther, setFormOther] = useState('');
   const [formQuote, setFormQuote] = useState('');
   const [formStatus, setFormStatus] = useState<BookingStatus>('confirmed');
+  const [formEndDate, setFormEndDate] = useState('');
+
+  // Trash / recently deleted
+  const [showTrash, setShowTrash] = useState(false);
 
   // ── Drag-and-drop state ──────────────────────────────────────────────────
+  // draggingBookingId = rescheduling the whole booking to a new start date
   const [draggingBookingId, setDraggingBookingId] = useState<string | null>(null);
+  // extendingBookingId = dragging the extend handle to set endDate
+  const [extendingBookingId, setExtendingBookingId] = useState<string | null>(null);
   const [dragOverDate, setDragOverDate] = useState<string | null>(null);
   // Prevent click-to-edit firing immediately after a drag ends
   const dragJustEndedRef = useRef(false);
 
+  // ── Rescheduling drag handlers ───────────────────────────────────────────
   const handleDragStart = (booking: Booking, e: React.DragEvent) => {
     setDraggingBookingId(booking.id);
     e.dataTransfer.effectAllowed = 'move';
@@ -93,19 +123,46 @@ const CalendarScreen: React.FC = () => {
   const handleDragEnd = () => {
     setDraggingBookingId(null);
     setDragOverDate(null);
-    // Suppress the next click so drag-end doesn't open the edit modal
     dragJustEndedRef.current = true;
     setTimeout(() => { dragJustEndedRef.current = false; }, 150);
   };
 
-  const handleDayDragOver = (isPast: boolean, e: React.DragEvent) => {
-    if (isPast || !draggingBookingId) return;
+  // ── Extend-day drag handlers ─────────────────────────────────────────────
+  const handleExtendStart = (booking: Booking, e: React.DragEvent) => {
+    setExtendingBookingId(booking.id);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', `extend:${booking.id}`);
+  };
+
+  const handleExtendEnd = () => {
+    setExtendingBookingId(null);
+    setDragOverDate(null);
+    dragJustEndedRef.current = true;
+    setTimeout(() => { dragJustEndedRef.current = false; }, 150);
+  };
+
+  // ── Day cell drag handlers ───────────────────────────────────────────────
+  const handleDayDragOver = (dateKey: string, isPast: boolean, e: React.DragEvent) => {
+    if (!draggingBookingId && !extendingBookingId) return;
+    if (extendingBookingId) {
+      // Extend: must drop on a day strictly after the booking's start date
+      const booking = bookings.find((b) => b.id === extendingBookingId);
+      if (!booking || dateKey <= booking.date) return;
+    } else if (isPast) {
+      return; // Rescheduling: no past dates
+    }
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
   };
 
   const handleDayDragEnter = (dateKey: string, isPast: boolean, e: React.DragEvent) => {
-    if (isPast || !draggingBookingId) return;
+    if (!draggingBookingId && !extendingBookingId) return;
+    if (extendingBookingId) {
+      const booking = bookings.find((b) => b.id === extendingBookingId);
+      if (!booking || dateKey <= booking.date) return;
+    } else if (isPast) {
+      return;
+    }
     e.preventDefault();
     setDragOverDate(dateKey);
   };
@@ -120,16 +177,34 @@ const CalendarScreen: React.FC = () => {
   const handleDrop = (dateKey: string, isPast: boolean, e: React.DragEvent) => {
     e.preventDefault();
     setDragOverDate(null);
-    setDraggingBookingId(null);
-    if (isPast) return;
+    const data = e.dataTransfer.getData('text/plain');
 
-    const bookingId = e.dataTransfer.getData('text/plain');
-    const booking = bookings.find((b) => b.id === bookingId && !b.isDeleted);
-    if (!booking) return;
-    if (booking.date === dateKey) return; // dropped on same day — no-op
-
-    dispatch(updateBooking({ ...booking, date: dateKey }));
-    setToast(`"${booking.customerName}" moved to ${formatDateDisplay(dateKey)}`);
+    if (data.startsWith('extend:')) {
+      // ── Extend drop ──
+      const bookingId = data.replace('extend:', '');
+      setExtendingBookingId(null);
+      const booking = bookings.find((b) => b.id === bookingId && !b.isDeleted);
+      if (!booking || dateKey <= booking.date) return;
+      // Dropping on the same endDate toggles it off (back to single day)
+      const newEndDate = booking.endDate === dateKey ? undefined : dateKey;
+      dispatch(updateBooking({ ...booking, endDate: newEndDate }));
+      setToast(
+        newEndDate
+          ? `"${booking.customerName}" extended to ${formatDateDisplay(dateKey)}`
+          : `"${booking.customerName}" back to single day`
+      );
+    } else {
+      // ── Reschedule drop ──
+      setDraggingBookingId(null);
+      if (isPast) return;
+      const bookingId = data;
+      const booking = bookings.find((b) => b.id === bookingId && !b.isDeleted);
+      if (!booking) return;
+      if (booking.date === dateKey) return; // same day — no-op
+      // Clear endDate when rescheduling (user can re-extend if needed)
+      dispatch(updateBooking({ ...booking, date: dateKey, endDate: undefined }));
+      setToast(`"${booking.customerName}" moved to ${formatDateDisplay(dateKey)}`);
+    }
   };
   // ────────────────────────────────────────────────────────────────────────
 
@@ -163,14 +238,29 @@ const CalendarScreen: React.FC = () => {
     return String(maxId + 1);
   }, [bookings]);
 
-  // Bookings grouped by date
+  // Bookings grouped by date — multi-day bookings appear in every day of their range.
+  // bleedLeft/bleedRight drive the continuous-card visual across adjacent cells.
   const bookingsByDate = useMemo(() => {
-    const map = new Map<string, Booking[]>();
+    const map = new Map<string, BookingEntry[]>();
     for (const b of bookings) {
       if (b.isDeleted) continue;
-      const list = map.get(b.date) || [];
-      list.push(b);
-      map.set(b.date, list);
+      const startKey = b.date;
+      const endKey = b.endDate || b.date;
+      let current = startKey;
+      let dayIndex = 0;
+      while (current <= endKey && dayIndex <= 31) {
+        const isLastDay = current === endKey;
+        const dow = getDayOfWeek(current); // 0=Mon … 6=Sun
+        // bleedLeft: not the very first day AND not a Monday (week-row boundary)
+        const bleedLeft = dayIndex > 0 && dow !== 0;
+        // bleedRight: not the last day AND not a Sunday (week-row boundary)
+        const bleedRight = !isLastDay && dow !== 6;
+        const list = map.get(current) || [];
+        list.push({ booking: b, isContinuation: dayIndex > 0, dayIndex, bleedLeft, bleedRight });
+        map.set(current, list);
+        current = advanceDateKey(current);
+        dayIndex++;
+      }
     }
     return map;
   }, [bookings]);
@@ -218,7 +308,7 @@ const CalendarScreen: React.FC = () => {
   };
 
   const openAddModal = (dateKey: string, isPast: boolean) => {
-    if (isPast || draggingBookingId) return;
+    if (isPast || draggingBookingId || extendingBookingId) return;
     setModalDate(dateKey);
     setEditingBooking(null);
     setFormName('');
@@ -228,6 +318,7 @@ const CalendarScreen: React.FC = () => {
     setFormOther('');
     setFormQuote('');
     setFormStatus('confirmed');
+    setFormEndDate('');
   };
 
   const openEditModal = (booking: Booking) => {
@@ -241,6 +332,7 @@ const CalendarScreen: React.FC = () => {
     setFormOther(booking.carOther || '');
     setFormQuote(booking.quote ? String(booking.quote) : '');
     setFormStatus(booking.status ?? 'confirmed');
+    setFormEndDate(booking.endDate || '');
   };
 
   const closeModal = () => {
@@ -269,6 +361,7 @@ const CalendarScreen: React.FC = () => {
         carOther: formOther.trim() || undefined,
         quote: Number(formQuote) || 0,
         date: modalDate,
+        endDate: formEndDate || undefined,
         status: formStatus,
       }));
       setToast('Booking updated!');
@@ -282,6 +375,7 @@ const CalendarScreen: React.FC = () => {
         carOther: formOther.trim() || undefined,
         quote: Number(formQuote) || 0,
         date: modalDate,
+        endDate: formEndDate || undefined,
         status: formStatus,
       };
       dispatch(addBooking(booking));
@@ -297,9 +391,26 @@ const CalendarScreen: React.FC = () => {
     closeModal();
   };
 
+  // Bookings deleted within last 30 days, newest first
+  const recentlyDeleted = useMemo(() => {
+    const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    return bookings
+      .filter((b) => b.isDeleted && b.deletedAt && Date.parse(b.deletedAt) >= cutoff)
+      .sort((a, b) => Date.parse(b.deletedAt!) - Date.parse(a.deletedAt!));
+  }, [bookings]);
+
+  const handleRestore = (booking: Booking) => {
+    dispatch(restoreBooking(booking.id));
+    setToast(`"${booking.customerName}" restored!`);
+  };
+
   const dismissToast = useCallback(() => setToast(null), []);
 
   const today = todayKey();
+  const isAnyDragging = !!(draggingBookingId || extendingBookingId);
+  const extendingBooking = extendingBookingId
+    ? bookings.find((b) => b.id === extendingBookingId) ?? null
+    : null;
 
   return (
     <div className="app-shell">
@@ -312,7 +423,7 @@ const CalendarScreen: React.FC = () => {
                 <CalendarDays className="icon" />
                 Calendar
               </h1>
-              <p className="muted">Car drop-off bookings — drag to reschedule</p>
+              <p className="muted">Car drop-off bookings — drag to reschedule · drag ↔ handle to extend to next day</p>
             </div>
           </header>
 
@@ -327,6 +438,18 @@ const CalendarScreen: React.FC = () => {
             <button type="button" className="secondary" onClick={goToToday}>
               Today
             </button>
+            <button
+              type="button"
+              className={`secondary calendar-trash-btn${recentlyDeleted.length > 0 ? ' has-items' : ''}`}
+              onClick={() => setShowTrash(true)}
+              title="Recently deleted bookings"
+            >
+              <Trash2 className="icon" />
+              Trash
+              {recentlyDeleted.length > 0 && (
+                <span className="trash-count-badge">{recentlyDeleted.length}</span>
+              )}
+            </button>
           </div>
 
           {/* Legend */}
@@ -336,10 +459,11 @@ const CalendarScreen: React.FC = () => {
                 {STATUS_CONFIG[s].label}
               </span>
             ))}
-            <span className="calendar-legend-hint">Drag a booking to reschedule it</span>
+            <span className="calendar-legend-hint">Drag card to reschedule · drag ↔ to extend</span>
           </div>
 
-          <div className="calendar-grid">
+          {/* is-dragging disables pointer-events on booking cards, fixing drag-over hover */}
+          <div className={`calendar-grid${isAnyDragging ? ' is-dragging' : ''}`}>
             {WEEKDAYS.map((day) => (
               <div className="calendar-weekday" key={day}>{day}</div>
             ))}
@@ -349,15 +473,20 @@ const CalendarScreen: React.FC = () => {
                 return <div className="calendar-day outside" key={`empty-${index}`} />;
               }
 
-              const dayBookings = bookingsByDate.get(cell.dateKey) || [];
+              const dayEntries = bookingsByDate.get(cell.dateKey) || [];
               const isToday = cell.dateKey === today;
               const isPast = cell.dateKey < today;
-              const isDropTarget = dragOverDate === cell.dateKey && !isPast;
+              const isDropTarget = dragOverDate === cell.dateKey;
+              // Extend target: green highlight — must be after the booking's start date
+              const isExtendTarget = isDropTarget && !!extendingBooking && cell.dateKey > extendingBooking.date;
+              // Reschedule target: blue highlight — not past, not extending
+              const isRescheduleTarget = isDropTarget && !extendingBooking && !isPast;
 
               let dayClass = 'calendar-day';
               if (isToday) dayClass += ' today';
               else if (isPast) dayClass += ' past';
-              if (isDropTarget) dayClass += ' drag-over';
+              if (isExtendTarget) dayClass += ' extend-over';
+              else if (isRescheduleTarget) dayClass += ' drag-over';
 
               return (
                 <div
@@ -365,19 +494,39 @@ const CalendarScreen: React.FC = () => {
                   key={cell.dateKey}
                   onClick={() => openAddModal(cell.dateKey, isPast)}
                   title={isPast ? undefined : 'Click to add booking'}
-                  onDragOver={(e) => handleDayDragOver(isPast, e)}
+                  onDragOver={(e) => handleDayDragOver(cell.dateKey, isPast, e)}
                   onDragEnter={(e) => handleDayDragEnter(cell.dateKey, isPast, e)}
                   onDragLeave={handleDayDragLeave}
                   onDrop={(e) => handleDrop(cell.dateKey, isPast, e)}
                 >
                   <div className="calendar-day-number">{cell.day}</div>
                   <div className="calendar-day-bookings">
-                    {dayBookings.map((b) => {
+                    {dayEntries.map(({ booking: b, isContinuation, dayIndex, bleedLeft, bleedRight }) => {
                       const status = b.status ?? 'confirmed';
                       const isDragging = draggingBookingId === b.id;
+                      // Build span bleed class string (used by both start and continuation cards)
+                      const spanCls = [bleedLeft ? 'span-bl' : '', bleedRight ? 'span-br' : ''].filter(Boolean).join(' ');
+
+                      // Continuation card (day 2, 3, …) — purely a visual band, same style as start
+                      if (isContinuation) {
+                        return (
+                          <div
+                            key={`${b.id}-day${dayIndex}`}
+                            className={`calendar-booking-card continuation ${STATUS_CONFIG[status].className}${spanCls ? ` ${spanCls}` : ''}${isDragging ? ' dragging' : ''}`}
+                            onClick={(e) => { e.stopPropagation(); if (!dragJustEndedRef.current) openEditModal(b); }}
+                            title={`${b.customerName} — Day ${dayIndex + 1}`}
+                          >
+                            <div className="booking-continuation-label">
+                              Day {dayIndex + 1}
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      // Primary card (day 1 / start date)
                       return (
                         <div
-                          className={`calendar-booking-card ${STATUS_CONFIG[status].className}${isDragging ? ' dragging' : ''}`}
+                          className={`calendar-booking-card ${STATUS_CONFIG[status].className}${spanCls ? ` ${spanCls}` : ''}${isDragging ? ' dragging' : ''}`}
                           key={b.id}
                           draggable
                           onDragStart={(e) => handleDragStart(b, e)}
@@ -395,6 +544,12 @@ const CalendarScreen: React.FC = () => {
                             {b.carMake} {b.carModel}{b.carOther ? ` — ${b.carOther}` : ''}
                           </span>
                           {b.quote > 0 && <span className="booking-quote">${b.quote.toFixed(2)}</span>}
+                          {b.endDate && (
+                            <span className="booking-multiday-label">
+                              until {formatDateDisplay(b.endDate)}
+                            </span>
+                          )}
+
                           {/* Quick-action status buttons (hidden while dragging) */}
                           {!isDragging && status !== 'completed' && status !== 'cancelled' && (
                             <div className="booking-quick-actions">
@@ -424,13 +579,31 @@ const CalendarScreen: React.FC = () => {
                               </button>
                             </div>
                           )}
+
+                          {/* Extend handle — drag this to set endDate */}
+                          {!isDragging && (
+                            <div
+                              className="booking-extend-handle"
+                              draggable
+                              onDragStart={(e) => { e.stopPropagation(); handleExtendStart(b, e); }}
+                              onDragEnd={(e) => { e.stopPropagation(); handleExtendEnd(); }}
+                              onClick={(e) => e.stopPropagation()}
+                              title="Drag to extend this booking to another day"
+                            >
+                              ↔ extend
+                            </div>
+                          )}
                         </div>
                       );
                     })}
 
-                    {/* Drop-target placeholder shown when dragging over an empty day */}
-                    {isDropTarget && dayBookings.length === 0 && (
+                    {/* Drop-target placeholder shown when rescheduling over an empty day */}
+                    {isRescheduleTarget && dayEntries.length === 0 && (
                       <div className="booking-drop-placeholder" />
+                    )}
+                    {/* Extend-target placeholder */}
+                    {isExtendTarget && (
+                      <div className="booking-extend-placeholder" />
                     )}
                   </div>
                 </div>
@@ -439,6 +612,55 @@ const CalendarScreen: React.FC = () => {
           </div>
         </div>
       </main>
+
+      {/* ── Recently Deleted (Trash) modal ─────────────────────────────── */}
+      {showTrash && (
+        <div className="calendar-modal-overlay" onClick={() => setShowTrash(false)}>
+          <div className="calendar-modal calendar-trash-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="calendar-modal-header">
+              <h3>
+                <Trash2 className="icon" />
+                Recently Deleted
+              </h3>
+              <span className="muted">Last 30 days</span>
+              <button type="button" className="calendar-modal-close" onClick={() => setShowTrash(false)}>
+                <X className="icon" />
+              </button>
+            </div>
+            {recentlyDeleted.length === 0 ? (
+              <p className="muted trash-empty">No recently deleted bookings.</p>
+            ) : (
+              <div className="trash-list">
+                {recentlyDeleted.map((b) => (
+                  <div key={b.id} className="trash-item">
+                    <div className="trash-item-info">
+                      <span className="trash-item-name">{b.customerName}</span>
+                      <span className="trash-item-sub">
+                        {b.carMake} {b.carModel}{b.carOther ? ` — ${b.carOther}` : ''} · {formatDateDisplay(b.date)}
+                        {b.endDate ? ` → ${formatDateDisplay(b.endDate)}` : ''}
+                      </span>
+                      {b.deletedAt && (
+                        <span className="trash-item-deleted-at muted">
+                          Deleted {new Date(b.deletedAt).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      className="secondary trash-restore-btn"
+                      onClick={() => handleRestore(b)}
+                      title="Restore this booking"
+                    >
+                      <RotateCcw size={14} />
+                      Restore
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {modalDate && (
         <div className="calendar-modal-overlay" onClick={closeModal}>
@@ -505,17 +727,28 @@ const CalendarScreen: React.FC = () => {
                   placeholder="Colour, rego, notes (optional)"
                 />
               </label>
-              <label>
-                Quote
-                <input
-                  type="number"
-                  value={formQuote}
-                  onChange={(e) => setFormQuote(e.target.value)}
-                  placeholder="0.00"
-                  min={0}
-                  step="0.01"
-                />
-              </label>
+              <div className="calendar-modal-row">
+                <label>
+                  Quote
+                  <input
+                    type="number"
+                    value={formQuote}
+                    onChange={(e) => setFormQuote(e.target.value)}
+                    placeholder="0.00"
+                    min={0}
+                    step="0.01"
+                  />
+                </label>
+                <label>
+                  End Date <span className="muted">(multi-day)</span>
+                  <input
+                    type="date"
+                    value={formEndDate}
+                    onChange={(e) => setFormEndDate(e.target.value)}
+                    min={modalDate || undefined}
+                  />
+                </label>
+              </div>
 
               {/* Status selector */}
               <div>

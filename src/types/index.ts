@@ -107,6 +107,7 @@ export interface Booking {
     carOther?: string;
     quote: number;
     date: string;
+    endDate?: string;
     status?: BookingStatus;
     updatedAt?: string;
     isDeleted?: boolean;
