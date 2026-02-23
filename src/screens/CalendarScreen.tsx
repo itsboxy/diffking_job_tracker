@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   CalendarDays,
@@ -112,6 +112,12 @@ const CalendarScreen: React.FC = () => {
   const [dragOverDate, setDragOverDate] = useState<string | null>(null);
   // Prevent click-to-edit firing immediately after a drag ends
   const dragJustEndedRef = useRef(false);
+
+  // ── Multi-day height sync ────────────────────────────────────────────────
+  // Measure each start card's offsetHeight and apply it to continuation cards
+  // so both segments share the same height → one seamless visual band.
+  const startCardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const [startCardHeights, setStartCardHeights] = useState<Map<string, number>>(new Map());
 
   // ── Rescheduling drag handlers ───────────────────────────────────────────
   const handleDragStart = (booking: Booking, e: React.DragEvent) => {
@@ -264,6 +270,19 @@ const CalendarScreen: React.FC = () => {
     }
     return map;
   }, [bookings]);
+
+  // After bookingsByDate changes, measure each start card and sync heights to continuation cards
+  useLayoutEffect(() => {
+    const next = new Map<string, number>();
+    startCardRefs.current.forEach((el, id) => {
+      if (el) next.set(id, el.offsetHeight);
+    });
+    setStartCardHeights((prev) => {
+      let same = prev.size === next.size;
+      if (same) next.forEach((h, id) => { if (prev.get(id) !== h) same = false; });
+      return same ? prev : next;
+    });
+  }, [bookingsByDate]);
 
   // Calendar grid cells
   const calendarCells = useMemo(() => {
@@ -507,18 +526,18 @@ const CalendarScreen: React.FC = () => {
                       // Build span bleed class string (used by both start and continuation cards)
                       const spanCls = [bleedLeft ? 'span-bl' : '', bleedRight ? 'span-br' : ''].filter(Boolean).join(' ');
 
-                      // Continuation card (day 2, 3, …) — purely a visual band, same style as start
+                      // Continuation card (day 2, 3, …) — same height as start card = one seamless band
                       if (isContinuation) {
+                        const measuredH = startCardHeights.get(b.id);
                         return (
                           <div
                             key={`${b.id}-day${dayIndex}`}
                             className={`calendar-booking-card continuation ${STATUS_CONFIG[status].className}${spanCls ? ` ${spanCls}` : ''}${isDragging ? ' dragging' : ''}`}
+                            style={measuredH ? { height: measuredH } : undefined}
                             onClick={(e) => { e.stopPropagation(); if (!dragJustEndedRef.current) openEditModal(b); }}
                             title={`${b.customerName} — Day ${dayIndex + 1}`}
                           >
-                            <div className="booking-continuation-label">
-                              Day {dayIndex + 1}
-                            </div>
+                            <span className="booking-continuation-name">{b.customerName}</span>
                           </div>
                         );
                       }
@@ -528,6 +547,10 @@ const CalendarScreen: React.FC = () => {
                         <div
                           className={`calendar-booking-card ${STATUS_CONFIG[status].className}${spanCls ? ` ${spanCls}` : ''}${isDragging ? ' dragging' : ''}`}
                           key={b.id}
+                          ref={(el) => {
+                            if (el) startCardRefs.current.set(b.id, el);
+                            else startCardRefs.current.delete(b.id);
+                          }}
                           draggable
                           onDragStart={(e) => handleDragStart(b, e)}
                           onDragEnd={handleDragEnd}

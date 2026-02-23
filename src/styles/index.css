@@ -1929,21 +1929,25 @@ h1, h2, h3, h4 {
   border-left: none; /* don't show status colour stripe on continuation days */
 }
 
-/* Continuation card (day 2, 3…) — same look as start, minimal content */
+/* Continuation card (day 2, 3…) — height set by JS to match start card = one seamless band */
 .calendar-booking-card.continuation {
   min-height: 22px;
   padding: 3px 5px;
   cursor: pointer;
-  justify-content: center;
+  justify-content: flex-start;
+  align-items: flex-start;
+  overflow: hidden;
 }
-.booking-continuation-label {
-  font-size: 10px;
-  font-weight: 500;
-  color: var(--text-secondary);
+/* Customer name at top of continuation so the band looks like it belongs to the same card */
+.booking-continuation-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+  opacity: 0.55;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  opacity: 0.75;
+  width: 100%;
 }
 
 /* Extend handle — shown on hover at the bottom of a booking card */
