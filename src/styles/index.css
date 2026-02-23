@@ -1764,7 +1764,9 @@ h1, h2, h3, h4 {
   border-bottom: 1px solid var(--border-light);
   cursor: pointer;
   transition: background var(--transition-fast);
-  /* overflow must stay visible so multi-day booking cards can bleed into adjacent cells */
+  /* min-width: 0 stops content from expanding the 1fr grid tracks (the standard
+     CSS grid fix). overflow: visible lets span-bleed cards paint into adjacent cells. */
+  min-width: 0;
   overflow: visible;
 }
 
@@ -1822,6 +1824,7 @@ h1, h2, h3, h4 {
   display: flex;
   flex-direction: column;
   gap: 3px;
+  min-width: 0; /* propagate width constraint to flex children */
 }
 
 .calendar-booking-card {
@@ -1837,6 +1840,7 @@ h1, h2, h3, h4 {
   line-height: 1.3;
   cursor: pointer;
   transition: box-shadow var(--transition-fast);
+  min-width: 0; /* allow card to shrink — essential for text-overflow: ellipsis to fire */
 }
 
 .calendar-booking-card:hover {
