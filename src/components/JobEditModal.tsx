@@ -6,7 +6,6 @@ import {
   Plus,
   PlusCircle,
   Save,
-  Tag,
   X,
 } from 'lucide-react';
 import { Job, JobAttachment, JobCategory, JobItem, JobMeasurement } from '../types';
@@ -253,18 +252,17 @@ const JobEditModal: React.FC<JobEditModalProps> = ({ job, onCancel, onSave }) =>
             </label>
             <label>
               Category
-              <div className="input-with-icon">
-                <Tag className="icon" />
-                <select
-                  value={category}
-                  onChange={(event) => setCategory(event.target.value as JobCategory)}
-                >
-                  <option value="Repair">{CATEGORY_LABELS.Repair}</option>
-                  <option value="Fabrication">{CATEGORY_LABELS.Fabrication}</option>
-                  <option value="Deliveries and Dispatch">
-                    {CATEGORY_LABELS['Deliveries and Dispatch']}
-                  </option>
-                </select>
+              <div className="category-toggle-group">
+                {(['Repair', 'Fabrication', 'Deliveries and Dispatch'] as JobCategory[]).map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    className={`category-toggle-btn${category === cat ? ' active' : ''}`}
+                    onClick={() => setCategory(cat)}
+                  >
+                    {CATEGORY_LABELS[cat]}
+                  </button>
+                ))}
               </div>
             </label>
             <label>

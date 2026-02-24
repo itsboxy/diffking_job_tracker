@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Calendar, ClipboardPlus, FileImage, Plus, PlusCircle, Tag } from 'lucide-react';
+import { Calendar, ClipboardPlus, FileImage, Plus, PlusCircle } from 'lucide-react';
 import { Customer, Job, JobAttachment, JobCategory, JobItem, JobMeasurement } from '../types';
 import { getUrgencyFromDate } from '../utils/urgency';
 import { CATEGORY_LABELS, UNIT_OPTIONS } from '../constants/labels';
@@ -268,13 +268,17 @@ const JobForm: React.FC<JobFormProps> = ({ onSubmit, customers = [] }) => {
         </label>
         <label>
           Category
-          <div className="input-with-icon">
-            <Tag className="icon" />
-            <select value={category} onChange={(event) => setCategory(event.target.value as JobCategory)}>
-              <option value="Repair">{CATEGORY_LABELS.Repair}</option>
-              <option value="Fabrication">{CATEGORY_LABELS.Fabrication}</option>
-              <option value="Deliveries and Dispatch">{CATEGORY_LABELS['Deliveries and Dispatch']}</option>
-            </select>
+          <div className="category-toggle-group">
+            {(['Repair', 'Fabrication', 'Deliveries and Dispatch'] as JobCategory[]).map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                className={`category-toggle-btn${category === cat ? ' active' : ''}`}
+                onClick={() => setCategory(cat)}
+              >
+                {CATEGORY_LABELS[cat]}
+              </button>
+            ))}
           </div>
         </label>
         <label>
