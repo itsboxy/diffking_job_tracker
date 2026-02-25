@@ -1083,15 +1083,13 @@ select option {
 }
 
 .menu-panel {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 4px);
+  position: fixed;
   background: var(--surface);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   min-width: 160px;
-  z-index: 50;
+  z-index: 999;
   overflow: hidden;
 }
 
@@ -1274,6 +1272,111 @@ select option {
 
 .measurement-section {
   margin: 0;
+}
+
+/* ── Diff Length Calculator (Fabrication) ─────────────────────────────────── */
+.diff-calculator {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.diff-calc-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+@media (max-width: 700px) {
+  .diff-calc-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.diff-calc-block {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.diff-calc-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.diff-calc-desc {
+  font-size: 11px;
+  margin: 0;
+}
+
+.diff-calc-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.diff-calc-fields label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.diff-input-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.diff-input-row input {
+  flex: 1;
+  padding: 5px var(--space-2);
+  font-size: 13px;
+}
+
+.diff-unit {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  min-width: 22px;
+}
+
+.diff-calc-result {
+  margin-top: var(--space-1);
+  padding: var(--space-2);
+  background: color-mix(in srgb, var(--accent-primary) 8%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 25%, transparent);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.diff-result-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.diff-result-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.diff-result-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent-primary);
+  font-variant-numeric: tabular-nums;
 }
 
 .attachments-grid {
@@ -2600,6 +2703,387 @@ h1, h2, h3, h4 {
   background: var(--bg-secondary);
   border-radius: var(--radius-sm);
   margin: 0;
+}
+
+/* ===========================
+   DIFF CALCULATOR
+   =========================== */
+
+.diff-calc-section {
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.diff-calc-section-header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.diff-calc-section-header .icon {
+  width: 18px;
+  height: 18px;
+  color: var(--accent-primary);
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+.diff-calc-section-header h3 {
+  margin: 0 0 2px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.diff-calc-section-header p {
+  margin: 0;
+  font-size: 12px;
+}
+
+/* Type toggle (Leaf Spring | Coil Over) */
+.diff-type-toggle {
+  display: flex;
+  gap: 2px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-full);
+  padding: 3px;
+  width: fit-content;
+}
+
+.diff-type-btn {
+  padding: 5px var(--space-4);
+  border-radius: var(--radius-full);
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.diff-type-btn:hover {
+  color: var(--text-primary);
+}
+
+.diff-type-btn.active {
+  background: var(--accent-primary);
+  color: var(--text-inverse);
+}
+
+/* Selectors row */
+.diff-selectors {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.diff-selectors label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  flex: 1;
+  min-width: 200px;
+}
+
+.diff-selectors select {
+  font-size: 13px;
+}
+
+.diff-config-note {
+  font-size: 11px;
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  background: color-mix(in srgb, var(--accent-primary) 6%, var(--surface));
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--accent-primary);
+}
+
+/* SVG Diagram */
+.diff-diagram-wrap {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3) var(--space-1);
+  overflow: hidden;
+}
+
+.diff-diagram-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* SVG element classes used in the diagram */
+.diff-svg-drum {
+  fill: var(--border-light);
+  stroke: var(--text-secondary);
+  stroke-width: 1.5;
+}
+
+.diff-svg-tube {
+  fill: var(--surface);
+  stroke: var(--text-secondary);
+  stroke-width: 1.5;
+}
+
+.diff-svg-carrier {
+  fill: var(--bg-secondary);
+  stroke: var(--text-secondary);
+  stroke-width: 2;
+}
+
+.diff-svg-carrier-label {
+  font-size: 11px;
+  font-weight: 700;
+  fill: var(--text-secondary);
+  letter-spacing: 0.05em;
+}
+
+.diff-svg-label-small {
+  font-size: 9px;
+  fill: var(--text-tertiary, var(--text-secondary));
+  font-weight: 500;
+}
+
+.diff-svg-bearing-line {
+  stroke: #f97316;
+  stroke-width: 1;
+  stroke-dasharray: 4 2;
+}
+
+.diff-svg-bearing-tick {
+  stroke: #f97316;
+  stroke-width: 1.5;
+}
+
+.diff-svg-bearing-text {
+  font-size: 8px;
+  fill: #f97316;
+}
+
+.diff-svg-bearing-val {
+  font-size: 9px;
+  fill: #f97316;
+  font-weight: 700;
+}
+
+.diff-svg-weld-line {
+  stroke: #22c55e;
+  stroke-width: 1;
+  stroke-dasharray: 4 2;
+}
+
+.diff-svg-weld-tick {
+  stroke: #22c55e;
+  stroke-width: 1.5;
+}
+
+.diff-svg-weld-text {
+  font-size: 8px;
+  fill: #22c55e;
+}
+
+.diff-svg-weld-val {
+  font-size: 9px;
+  fill: #22c55e;
+  font-weight: 700;
+}
+
+.diff-svg-dtd-line {
+  stroke: var(--accent-primary);
+  stroke-width: 1;
+  stroke-dasharray: 4 2;
+}
+
+.diff-svg-dtd-tick {
+  stroke: var(--accent-primary);
+  stroke-width: 1.5;
+}
+
+.diff-svg-dtd-text {
+  font-size: 8px;
+  fill: var(--accent-primary);
+}
+
+.diff-svg-dtd-val {
+  font-size: 9px;
+  fill: var(--accent-primary);
+  font-weight: 700;
+}
+
+/* Carrier face circle */
+.diff-svg-carrier-circle {
+  fill: none;
+  stroke: var(--text-secondary);
+  stroke-width: 1.5;
+}
+
+/* Bolt holes on carrier face */
+.diff-svg-bolt {
+  fill: var(--bg-secondary);
+  stroke: var(--text-secondary);
+  stroke-width: 1.5;
+}
+
+/* Spring saddle position markers (amber) */
+.diff-svg-saddle-marker {
+  stroke: #eab308;
+  stroke-width: 2;
+}
+.diff-svg-saddle-tick {
+  stroke: #eab308;
+  stroke-width: 1.5;
+}
+.diff-svg-saddle-label {
+  font-size: 7px;
+  fill: #eab308;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+/* Tube length dimension lines (purple) */
+.diff-svg-tube-len-line {
+  stroke: #a855f7;
+  stroke-width: 1;
+  stroke-dasharray: 4 2;
+}
+.diff-svg-tube-len-tick {
+  stroke: #a855f7;
+  stroke-width: 1.5;
+}
+.diff-svg-tube-len-text {
+  font-size: 8px;
+  fill: #a855f7;
+}
+.diff-svg-tube-len-val {
+  font-size: 9px;
+  fill: #a855f7;
+  font-weight: 700;
+}
+
+/* Results table additions */
+.diff-results-ref-head {
+  display: flex;
+  padding: var(--space-2) var(--space-3);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  border-top: 1px solid var(--border-light);
+  margin-top: var(--space-1);
+}
+
+.diff-results-row--ref {
+  opacity: 0.75;
+}
+
+.diff-results-warning {
+  padding: var(--space-2) var(--space-3);
+  background: rgba(239, 68, 68, 0.1);
+  border-left: 3px solid #ef4444;
+  color: #ef4444;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  margin: var(--space-1) 0;
+}
+
+.diff-diagram-placeholder {
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.diff-diagram-note {
+  font-size: 10px;
+  text-align: center;
+  margin: 4px 0 2px;
+}
+
+/* Shorten input */
+.diff-shorten-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.diff-shorten-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.diff-shorten-summary {
+  font-size: 11px;
+  padding: 4px var(--space-2);
+  background: color-mix(in srgb, var(--accent-primary) 8%, var(--surface));
+  border-radius: var(--radius-sm);
+}
+
+/* Results table */
+.diff-results {
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.diff-results-head {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.diff-results-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  font-size: 13px;
+  border-top: 1px solid var(--border-light);
+  align-items: center;
+}
+
+.diff-results-row--highlight {
+  background: color-mix(in srgb, var(--accent-primary) 6%, var(--surface));
+  font-weight: 600;
+}
+
+.diff-results-row span:not(:first-child) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  min-width: 100px;
+}
+
+.diff-val-changed {
+  color: var(--accent-primary);
+  font-weight: 700;
+}
+
+.diff-val-unchanged {
+  color: var(--text-secondary);
 }
 
 /* ===========================

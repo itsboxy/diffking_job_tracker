@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Layers, Plus, Trash2, X, ZoomIn } from 'lucide-react';
 import SideNav from '../components/SideNav';
+import DiffCalculator from '../components/DiffCalculator';
 
 interface Drawing {
   id: string;
@@ -117,6 +118,12 @@ const HandbookFabricationScreen: React.FC = () => {
               </label>
             </div>
           </header>
+
+          <DiffCalculator />
+
+          <div className="section-divider" style={{ marginTop: 'var(--space-5)' }}>
+            <span>Drawings &amp; References</span>
+          </div>
 
           {drawings.length === 0 ? (
             <div className="handbook-fab-empty">

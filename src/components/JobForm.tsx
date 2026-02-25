@@ -58,6 +58,22 @@ const JobForm: React.FC<JobFormProps> = ({ onSubmit, customers = [] }) => {
   const [totalPaid, setTotalPaid] = useState<number>(0);
   const [totalPaidInput, setTotalPaidInput] = useState<string>('');
 
+  // ── Diff Length Calculator (Fabrication only) ─────────────────────────────
+  const [calcStockWidth, setCalcStockWidth] = useState('');
+  const [calcTargetWidth, setCalcTargetWidth] = useState('');
+  const [calcCentreWidth, setCalcCentreWidth] = useState('');
+  const [calcTubeTarget, setCalcTubeTarget] = useState('');
+
+  const diffShortenTotal =
+    calcStockWidth && calcTargetWidth
+      ? Math.max(0, parseFloat(calcStockWidth) - parseFloat(calcTargetWidth))
+      : null;
+
+  const tubeEachLength =
+    calcCentreWidth && calcTubeTarget
+      ? Math.max(0, (parseFloat(calcTubeTarget) - parseFloat(calcCentreWidth)) / 2)
+      : null;
+
   const handleCustomerNameChange = (value: string) => {
     setCustomerName(value);
     const match = customers.find(
@@ -268,18 +284,11 @@ const JobForm: React.FC<JobFormProps> = ({ onSubmit, customers = [] }) => {
         </label>
         <label>
           Category
-          <div className="category-toggle-group">
-            {(['Repair', 'Fabrication', 'Deliveries and Dispatch'] as JobCategory[]).map((cat) => (
-              <button
-                key={cat}
-                type="button"
-                className={`category-toggle-btn${category === cat ? ' active' : ''}`}
-                onClick={() => setCategory(cat)}
-              >
-                {CATEGORY_LABELS[cat]}
-              </button>
-            ))}
-          </div>
+          <select value={category} onChange={(event) => setCategory(event.target.value as JobCategory)}>
+            <option value="Repair">{CATEGORY_LABELS.Repair}</option>
+            <option value="Fabrication">{CATEGORY_LABELS.Fabrication}</option>
+            <option value="Deliveries and Dispatch">{CATEGORY_LABELS['Deliveries and Dispatch']}</option>
+          </select>
         </label>
         <label>
           Issue Date
@@ -319,52 +328,160 @@ const JobForm: React.FC<JobFormProps> = ({ onSubmit, customers = [] }) => {
       </label>
 
       {category === 'Fabrication' ? (
-        <section className="measurement-section">
-          <div className="items-header">
-            <h3>Measurements</h3>
-            <button type="button" className="secondary" onClick={addMeasurement}>
-              <PlusCircle className="icon" />
-              Add Measurement
-            </button>
-          </div>
+        <>
+          <section className="measurement-section">
+            <div className="items-header">
+              <h3>Measurements</h3>
+              <button type="button" className="secondary" onClick={addMeasurement}>
+                <PlusCircle className="icon" />
+                Add Measurement
+              </button>
+            </div>
 
-          <div className="measurement-grid">
-            {measurements.map((measurement, index) => (
-              <div className="measurement-row" key={`measurement-${index}`}>
-                <input
-                  type="text"
-                  placeholder="Part / Label"
-                  value={measurement.label}
-                  onChange={(event) => handleMeasurementChange(index, 'label', event.target.value)}
-                />
-                <input
-                  type="text"
-                  placeholder="Value"
-                  value={measurement.value}
-                  onChange={(event) => handleMeasurementChange(index, 'value', event.target.value)}
-                />
-                <select
-                  value={measurement.units}
-                  onChange={(event) => handleMeasurementChange(index, 'units', event.target.value)}
-                >
-                  <option value="">Units</option>
-                  {UNIT_OPTIONS
-                    .filter((option) => option)
-                    .map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                </select>
-                {measurements.length > 1 ? (
-                  <button type="button" className="danger" onClick={() => removeMeasurement(index)}>
-                    Remove
-                  </button>
-                ) : null}
-              </div>
-            ))}
+            <div className="measurement-grid">
+              {measurements.map((measurement, index) => (
+                <div className="measurement-row" key={`measurement-${index}`}>
+                  <input
+                    type="text"
+                    placeholder="Part / Label"
+                    value={measurement.label}
+                    onChange={(event) => handleMeasurementChange(index, 'label', event.target.value)}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Value"
+                    value={measurement.value}
+                    onChange={(event) => handleMeasurementChange(index, 'value', event.target.value)}
+                  />
+                  <select
+                    value={measurement.units}
+                    onChange={(event) => handleMeasurementChange(index, 'units', event.target.value)}
+                  >
+                    <option value="">Units</option>
+                    {UNIT_OPTIONS
+                      .filter((option) => option)
+                      .map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                  </select>
+                  {measurements.length > 1 ? (
+                    <button type="button" className="danger" onClick={() => removeMeasurement(index)}>
+                      Remove
+                    </button>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* ── Diff Length Calculator ──────────────────────────────────── */}
+          <div className="section-divider">
+            <span>Diff Length Calculator</span>
           </div>
-        </section>
+          <section className="diff-calculator">
+            <div className="diff-calc-grid">
+
+              {/* Shortening block */}
+              <div className="diff-calc-block">
+                <h4 className="diff-calc-title">Shortening</h4>
+                <p className="diff-calc-desc muted">How much to cut when narrowing a diff</p>
+                <div className="diff-calc-fields">
+                  <label>
+                    Stock Width
+                    <div className="diff-input-row">
+                      <input
+                        type="number"
+                        value={calcStockWidth}
+                        onChange={(e) => setCalcStockWidth(e.target.value)}
+                        placeholder="e.g. 1480"
+                        min={0}
+                        step="0.1"
+                      />
+                      <span className="diff-unit">mm</span>
+                    </div>
+                  </label>
+                  <label>
+                    Target Width
+                    <div className="diff-input-row">
+                      <input
+                        type="number"
+                        value={calcTargetWidth}
+                        onChange={(e) => setCalcTargetWidth(e.target.value)}
+                        placeholder="e.g. 1440"
+                        min={0}
+                        step="0.1"
+                      />
+                      <span className="diff-unit">mm</span>
+                    </div>
+                  </label>
+                </div>
+                {diffShortenTotal !== null && !isNaN(diffShortenTotal) && (
+                  <div className="diff-calc-result">
+                    <div className="diff-result-row">
+                      <span className="diff-result-label">Total to cut</span>
+                      <span className="diff-result-value">{diffShortenTotal.toFixed(1)} mm</span>
+                    </div>
+                    <div className="diff-result-row">
+                      <span className="diff-result-label">Per side (symmetric)</span>
+                      <span className="diff-result-value">{(diffShortenTotal / 2).toFixed(1)} mm</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Tube length block */}
+              <div className="diff-calc-block">
+                <h4 className="diff-calc-title">Tube Length</h4>
+                <p className="diff-calc-desc muted">Axle tube length for custom or rebuilt diffs</p>
+                <div className="diff-calc-fields">
+                  <label>
+                    Centre Section Width
+                    <div className="diff-input-row">
+                      <input
+                        type="number"
+                        value={calcCentreWidth}
+                        onChange={(e) => setCalcCentreWidth(e.target.value)}
+                        placeholder="e.g. 320"
+                        min={0}
+                        step="0.1"
+                      />
+                      <span className="diff-unit">mm</span>
+                    </div>
+                  </label>
+                  <label>
+                    Target Overall Width
+                    <div className="diff-input-row">
+                      <input
+                        type="number"
+                        value={calcTubeTarget}
+                        onChange={(e) => setCalcTubeTarget(e.target.value)}
+                        placeholder="e.g. 1440"
+                        min={0}
+                        step="0.1"
+                      />
+                      <span className="diff-unit">mm</span>
+                    </div>
+                  </label>
+                </div>
+                {tubeEachLength !== null && !isNaN(tubeEachLength) && (
+                  <div className="diff-calc-result">
+                    <div className="diff-result-row">
+                      <span className="diff-result-label">Each tube</span>
+                      <span className="diff-result-value">{tubeEachLength.toFixed(1)} mm</span>
+                    </div>
+                    <div className="diff-result-row">
+                      <span className="diff-result-label">Total tube stock</span>
+                      <span className="diff-result-value">{(tubeEachLength * 2).toFixed(1)} mm</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+            </div>
+          </section>
+        </>
       ) : null}
 
       <div className="section-divider">

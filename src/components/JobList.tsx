@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Archive,
   DollarSign,
@@ -48,10 +48,20 @@ const JobList: React.FC<JobListProps> = ({
   hideUrgency,
 }) => {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<{ src: string; name: string } | null>(null);
   const [paymentModalJob, setPaymentModalJob] = useState<Job | null>(null);
   const [paymentAmount, setPaymentAmount] = useState('');
+
+  // Close the menu whenever the user scrolls (any container, capture phase)
+  useEffect(() => {
+    if (!openMenuId) return;
+    const close = () => { setOpenMenuId(null); setMenuPos(null); };
+    window.addEventListener('scroll', close, true);
+    return () => window.removeEventListener('scroll', close, true);
+  }, [openMenuId]);
+
   if (!jobs.length) {
     return <p className="empty-state">No jobs for this category yet.</p>;
   }
@@ -303,13 +313,26 @@ const JobList: React.FC<JobListProps> = ({
                       <button
                         type="button"
                         className="menu-trigger"
-                        onClick={() => setOpenMenuId(openMenuId === job.id ? null : job.id)}
+                        onClick={(event) => {
+                          if (openMenuId === job.id) {
+                            setOpenMenuId(null);
+                            setMenuPos(null);
+                          } else {
+                            const rect = event.currentTarget.getBoundingClientRect();
+                            setMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+                            setOpenMenuId(job.id);
+                          }
+                        }}
                         aria-label="Job actions"
                       >
                         <MoreHorizontal className="icon" />
                       </button>
                       {openMenuId === job.id ? (
-                        <div className="menu-panel" onClick={(event) => event.stopPropagation()}>
+                        <div
+                          className="menu-panel"
+                          style={menuPos ? { top: menuPos.top, right: menuPos.right } : undefined}
+                          onClick={(event) => event.stopPropagation()}
+                        >
                           {onEdit ? (
                             <button type="button" onClick={() => { setOpenMenuId(null); onEdit(job); }}>
                               <Pencil className="icon" />
